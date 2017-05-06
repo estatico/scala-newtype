@@ -1,13 +1,16 @@
-package io.estatico.newtype.ops
+package io.estatico.newtype
+package ops
 
-import io.estatico.newtype.NewType
-
-final class NewTypeOps[Tag, R](private val newtype: NewType.Aux[Tag, R]) extends AnyVal {
-  type Type = NewType.Aux[Tag, R]
+final class NewTypeOps[B, T, R](
+  private val newtype: BaseNewType.Aux[B, T, R]
+) extends AnyVal {
+  type Type = BaseNewType.Aux[B, T, R]
   def repr: R = newtype.asInstanceOf[R]
   def withRepr(f: R => R): Type = f(newtype.asInstanceOf[R]).asInstanceOf[Type]
 }
 
 trait ToNewTypeOps {
-  implicit def toNewTypeOps[T, R](x: NewType.Aux[T, R]): NewTypeOps[T, R] = new NewTypeOps[T, R](x)
+  implicit def toNewTypeOps[B, T, R](
+    x: BaseNewType.Aux[B, T, R]
+  ): NewTypeOps[B, T, R] = new NewTypeOps[B, T, R](x)
 }

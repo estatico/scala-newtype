@@ -14,6 +14,13 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
     NatInt(-1) shouldEqual None
   }
 
+  it should "not be a subtype of its Repr" in {
+    type Foo = Foo.Type
+    object Foo extends NewType.Default[Int]
+    assertCompiles("Foo(1): Foo")
+    assertDoesNotCompile("Foo(1): Int")
+  }
+
   it should "find implicit instances" in {
     type Box = Box.Type
     object Box extends NewType.For[String] with NewTypeDeriving {
@@ -48,5 +55,14 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
       import io.estatico.newtype.ops._
       HasOps(1).repr
     """)
+  }
+
+  "NewSubType" should "be a subtype of its Repr" in {
+    type Foo = Foo.Type
+    object Foo extends NewSubType.For[String] with NewTypeApply
+    assertCompiles("""Foo("bar"): Foo""")
+    assertCompiles("""Foo("bar"): String""")
+    Foo("bar").toUpperCase shouldEqual "BAR"
+    Foo("bar").toUpperCase shouldEqual Foo("BAR")
   }
 }
