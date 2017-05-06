@@ -1,14 +1,20 @@
 package io.estatico.newtype
 
+/** Base skeleton for building newtypes. */
 trait BaseNewType {
   type Base
-  type Type = Base with NewTypeMeta[Tag, Repr]
   type Repr
   trait Tag
+  final type Type = BaseNewType.Aux[Base, Tag, Repr]
 }
 
 object BaseNewType {
-  type Aux[B, T, R] = B with NewTypeMeta[T, R]
-}
+  /** `Type` implementation for all newtypes; see `BaseNewType`. */
+  type Aux[B, T, R] = B with Meta[T, R]
+  trait Meta[T, R]
 
-trait NewTypeMeta[T, R]
+  /** Helper trait to refine Repr via a type parameter. */
+  trait Of[R] extends BaseNewType {
+    final type Repr = R
+  }
+}

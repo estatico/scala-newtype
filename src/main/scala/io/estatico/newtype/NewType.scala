@@ -7,12 +7,8 @@ trait NewType extends BaseNewType { self =>
 }
 
 object NewType {
-
-  trait For[R] extends NewType {
-    final type Repr = R
-  }
-
-  trait Default[R] extends For[R] with NewTypeExtras
+  trait Of[R] extends BaseNewType.Of[R] with NewType
+  trait Default[R] extends Of[R] with NewTypeExtras
 }
 
 trait NewTypeAutoOps extends BaseNewType {
