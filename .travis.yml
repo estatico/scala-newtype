@@ -1,0 +1,20 @@
+language: scala
+
+scala:
+  - 2.10.6
+  - 2.11.8
+
+jdk:
+  - oraclejdk7
+  - oraclejdk8
+
+matrix:
+  include:
+  - scala: 2.12.1
+    jdk: oraclejdk8
+
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt/boot
+    - $HOME/.coursier
