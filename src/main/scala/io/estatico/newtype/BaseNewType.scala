@@ -6,6 +6,10 @@ trait BaseNewType {
   type Repr
   trait Tag
   final type Type = BaseNewType.Aux[Base, Tag, Repr]
+
+  implicit val unsafeIso: UnsafeNewTypeIso.Aux[Type, Repr] = UnsafeNewTypeIso.instance
+
+  protected val unsafe = UnsafeNewTypeIso.Methods[Type, Repr]
 }
 
 object BaseNewType {

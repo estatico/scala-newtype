@@ -17,19 +17,14 @@ trait NewTypeAutoOps extends BaseNewType {
   ): NewTypeOps[Type, Tag, Repr] = new NewTypeOps[Type, Tag, Repr](x)
 }
 
-trait NewTypeCasts extends BaseNewType {
-  @inline protected def cast(x: Repr): Type = x.asInstanceOf[Type]
-  @inline protected def castM[M[_]](mx: M[Repr]): M[Type] = mx.asInstanceOf[M[Type]]
-}
-
 trait NewTypeApply extends BaseNewType {
   /** Convert a `Repr` to a `Type`. */
-  @inline def apply(x: Repr): Type = x.asInstanceOf[Type]
+  @inline final def apply(x: Repr): Type = x.asInstanceOf[Type]
 }
 
 trait NewTypeApplyM extends NewTypeApply {
   /** Convert an `M[Repr]` to a `M[Type]`. */
-  @inline def applyM[M[_]](mx: M[Repr]): M[Type] = mx.asInstanceOf[M[Type]]
+  @inline final def applyM[M[_]](mx: M[Repr]): M[Type] = mx.asInstanceOf[M[Type]]
 }
 
 trait NewTypeDeriving extends BaseNewType {

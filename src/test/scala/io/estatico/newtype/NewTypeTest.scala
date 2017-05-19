@@ -6,9 +6,11 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
 
+  import NewTypeTest._
+
   "NewType" should "create a type with no runtime overhead" in {
-    object NatInt extends NewType.Of[Int] with NewTypeCasts {
-      def apply(i: Int): Option[Type] = if (i < 0) None else castM(Some(i))
+    object NatInt extends NewType.Of[Int] {
+      def apply(i: Int): Option[Type] = if (i < 0) None else unsafe.wrapM(Some(i))
     }
     NatInt(1) shouldEqual Some(1)
     NatInt(-1) shouldEqual None
@@ -27,6 +29,22 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
       implicit val arb: Arbitrary[Type] = deriving[Arbitrary]
     }
     implicitly[Arbitrary[Box]].arbitrary.sample shouldBe defined
+  }
+
+  it should "support user ops" in {
+    GoodInt(3).cube shouldEqual 27
+  }
+
+  it should "have an instance of UnsafeNewTypeIso" in {
+    type Foo = Foo.Type
+    object Foo extends NewType.Default[Int]
+    val unsafe = UnsafeNewTypeIso.Methods(Foo)
+    import unsafe._
+    // Using type annotations here to prove that unsafe methods return the right type.
+    (wrap(1): Foo) shouldEqual 1
+    (unwrap(Foo(1)): Int) shouldEqual 1
+    (wrapM(List(1)): List[Foo]) shouldEqual List(1)
+    (unwrapM(List(Foo(1))): List[Int]) shouldEqual List(1)
   }
 
   "NewTypeApply" should "automatically create an apply method" in {
@@ -64,5 +82,30 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
     assertCompiles("""Foo("bar"): String""")
     Foo("bar").toUpperCase shouldEqual "BAR"
     Foo("bar").toUpperCase shouldEqual Foo("BAR")
+  }
+
+  it should "have an instance of UnsafeNewTypeIso" in {
+    type Foo = Foo.Type
+    object Foo extends NewSubType.Default[Int]
+    val unsafe = UnsafeNewTypeIso.Methods(Foo)
+    import unsafe._
+    // Using type annotations here to prove that unsafe methods return the right type.
+    (wrap(1): Foo) shouldEqual 1
+    (unwrap(Foo(1)): Int) shouldEqual 1
+    (wrapM(List(1)): List[Foo]) shouldEqual List(1)
+    (unwrapM(List(Foo(1))): List[Int]) shouldEqual List(1)
+  }
+}
+
+object NewTypeTest {
+
+  type GoodInt = GoodInt.Type
+  object GoodInt extends NewType.Default[Int] {
+    implicit final class Ops(private val me: GoodInt) extends AnyVal {
+      def cube: GoodInt = {
+        val i = unsafe.unwrap(me)
+        unsafe.wrap(i * i * i)
+      }
+    }
   }
 }
