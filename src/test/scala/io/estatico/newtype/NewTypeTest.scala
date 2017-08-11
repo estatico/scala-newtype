@@ -101,7 +101,7 @@ object NewTypeTest {
 
   type GoodInt = GoodInt.Type
   object GoodInt extends NewType.Default[Int] {
-    implicit final class Ops(private val me: GoodInt) extends AnyVal {
+    implicit final class Ops(val me: GoodInt) extends AnyVal {
       def cube: GoodInt = {
         val i = unsafe.unwrap(me)
         unsafe.wrap(i * i * i)

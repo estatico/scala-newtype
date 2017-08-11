@@ -2,11 +2,11 @@ package io.estatico.newtype
 package ops
 
 final class NewTypeOps[B, T, R](
-  private val newtype: BaseNewType.Aux[B, T, R]
+  val self: BaseNewType.Aux[B, T, R]
 ) extends AnyVal {
   type Type = BaseNewType.Aux[B, T, R]
-  def repr: R = newtype.asInstanceOf[R]
-  def withRepr(f: R => R): Type = f(newtype.asInstanceOf[R]).asInstanceOf[Type]
+  def repr: R = self.asInstanceOf[R]
+  def withRepr(f: R => R): Type = f(self.asInstanceOf[R]).asInstanceOf[Type]
 }
 
 trait ToNewTypeOps {
