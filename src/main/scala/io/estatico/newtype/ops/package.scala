@@ -1,3 +1,5 @@
 package io.estatico.newtype
 
-package object ops extends ops.ToNewTypeOps
+package object ops
+  extends ops.ToNewTypeOps
+  with ToCoercibleIdOps
