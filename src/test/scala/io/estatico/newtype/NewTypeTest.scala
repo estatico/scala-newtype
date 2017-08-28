@@ -25,7 +25,7 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
 
   it should "find implicit instances" in {
     type Box = Box.Type
-    object Box extends NewType.Of[String] with NewTypeDeriving {
+    object Box extends NewType.Of[String] with NewTypeExtras.Deriving {
       implicit val arb: Arbitrary[Type] = deriving[Arbitrary]
     }
     implicitly[Arbitrary[Box]].arbitrary.sample shouldBe defined
@@ -55,7 +55,7 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
   }
 
   "NewTypeApply" should "automatically create an apply method" in {
-    object PersonId extends NewType.Of[Int] with NewTypeApply
+    object PersonId extends NewType.Of[Int] with NewTypeExtras.Apply
     PersonId(1) shouldEqual 1
   }
 
@@ -67,14 +67,14 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
   }
 
   "NewTypeOps" should "not be available without extending NewTypeAutoOps or importing ops._" in {
-    object Simple extends NewType.Of[Int] with NewTypeApply
+    object Simple extends NewType.Of[Int] with NewTypeExtras.Apply
     assertCompiles("Simple(1)")
     assertDoesNotCompile("Simple(1).repr")
     assertCompiles("""
       import io.estatico.newtype.ops._
       Simple(1).repr
     """)
-    object HasOps extends NewType.Of[Int] with NewTypeApply with NewTypeAutoOps
+    object HasOps extends NewType.Of[Int] with NewTypeExtras.Apply with NewTypeExtras.AutoOps
     assertCompiles("HasOps(1).repr")
     assertCompiles("""
       import io.estatico.newtype.ops._
@@ -84,7 +84,7 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
 
   "NewSubType" should "be a subtype of its Repr" in {
     type Foo = Foo.Type
-    object Foo extends NewSubType.Of[String] with NewTypeApply
+    object Foo extends NewSubType.Of[String] with NewTypeExtras.Apply
     assertCompiles("""Foo("bar"): Foo""")
     assertCompiles("""Foo("bar"): String""")
     Foo("bar").toUpperCase shouldEqual "BAR"

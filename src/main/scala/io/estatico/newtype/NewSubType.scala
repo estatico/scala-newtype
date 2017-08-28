@@ -7,5 +7,5 @@ trait NewSubType extends BaseNewType {
 
 object NewSubType {
   trait Of[R] extends BaseNewType.Of[R] with NewSubType
-  trait Default[R] extends Of[R] with NewTypeExtras
+  trait Default[R] extends Of[R] with NewTypeExtras.All
 }
