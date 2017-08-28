@@ -8,11 +8,11 @@ trait BaseNewType {
   final type Type = BaseNewType.Aux[Base, Tag, Repr]
 
   // Define Coercible instances for which we can safely cast to/from.
-  @inline implicit def wrap: Coercible[Repr, Type] = Coercible.instance
-  @inline implicit def unwrap: Coercible[Type, Repr] = Coercible.instance
-  @inline implicit def wrapM[M[_]]: Coercible[M[Repr], M[Type]] = Coercible.instance
-  @inline implicit def unwrapM[M[_]]: Coercible[M[Type], M[Repr]] = Coercible.instance
-  @inline implicit def convert[N <: BaseNewType.Aux[_, _, Repr]]: Coercible[Type, N] = Coercible.instance
+  @inline implicit def unsafeWrap: Coercible[Repr, Type] = Coercible.instance
+  @inline implicit def unsafeUnwrap: Coercible[Type, Repr] = Coercible.instance
+  @inline implicit def unsafeWrapM[M[_]]: Coercible[M[Repr], M[Type]] = Coercible.instance
+  @inline implicit def unsafeUnwrapM[M[_]]: Coercible[M[Type], M[Repr]] = Coercible.instance
+  @inline implicit def unsafeConvert[N <: BaseNewType.Aux[_, _, Repr]]: Coercible[Type, N] = Coercible.instance
 }
 
 object BaseNewType {
