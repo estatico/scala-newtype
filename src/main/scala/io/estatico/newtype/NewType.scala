@@ -32,7 +32,12 @@ trait NewTypeDeriving extends BaseNewType {
   def deriving[T[_]](implicit ev: T[Repr]): T[Type] = ev.asInstanceOf[T[Type]]
 }
 
+trait NewTypeAla extends BaseNewType {
+  def ala[F[_], B](fr: F[Repr])(f: F[Repr] => (Repr => B) => Type): Repr = ???
+}
+
 trait NewTypeExtras
   extends NewTypeApplyM
   with NewTypeDeriving
   with NewTypeAutoOps
+  with NewTypeAla

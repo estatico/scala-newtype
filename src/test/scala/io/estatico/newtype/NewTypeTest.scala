@@ -110,6 +110,33 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
     (List(Foo(1)).coerce[List[Int]]: List[Int]) shouldEqual List(1)
   }
 
+  "ala" should "work" in {
+
+    trait Monoid[A] {
+      def empty: A
+      def combine(x: A, y: A): A
+    }
+
+    object Monoid {
+      def apply[A : Monoid]: Monoid[A] = implicitly
+    }
+
+    trait Foldable[F[_]] {
+      def foldLeft[A, B](fa: F[A], b: B)(f: (B, A) => B): B
+      def foldMap[A, B](fa: F[A])(f: A => B)(implicit B: Monoid[B]): B =
+        foldLeft(fa, B.empty)((b, a) => B.combine(b, f(a)))
+    }
+
+    object Foldable {
+      def apply[F[_] : Foldable]: Foldable[F] = implicitly
+    }
+
+    type Sum[A] = Sum.Type
+    object Sum extends NewType.Default[Int] {
+
+    }
+  }
+
   "Coercible" should "work across newtypes" in {
     type Foo = Foo.Type
     object Foo extends NewType.Default[Int]
