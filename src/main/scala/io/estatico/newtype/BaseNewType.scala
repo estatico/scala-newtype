@@ -13,6 +13,11 @@ trait BaseNewType {
   @inline implicit def wrapM[M[_]]: Coercible[M[Repr], M[Type]] = Coercible.instance
   @inline implicit def unwrapM[M[_]]: Coercible[M[Type], M[Repr]] = Coercible.instance
   @inline implicit def convert[N <: BaseNewType.Aux[_, _, Repr]]: Coercible[Type, N] = Coercible.instance
+  // Avoid ClassCastException with Array types by prohibiting Array coercing.
+  @inline implicit def cannotWrapArrayAmbiguous1: Coercible[Array[Repr], Array[Type]] = Coercible.instance
+  @inline implicit def cannotWrapArrayAmbiguous2: Coercible[Array[Repr], Array[Type]] = Coercible.instance
+  @inline implicit def cannotUnwrapArrayAmbiguous1: Coercible[Array[Type], Array[Repr]] = Coercible.instance
+  @inline implicit def cannotUnwrapArrayAmbiguous2: Coercible[Array[Type], Array[Repr]] = Coercible.instance
 }
 
 object BaseNewType {
