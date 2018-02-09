@@ -10,8 +10,7 @@ lazy val root = project.in(file(".")).
     publishLocal := {}
   )
 
-
-lazy val newtype = crossProject.in(file(".")).settings(Seq(
+lazy val newtype = crossProject.in(file(".")).settings(
   name := "newtype",
 
   scalacOptions ++= Seq(
@@ -20,13 +19,19 @@ lazy val newtype = crossProject.in(file(".")).settings(Seq(
     "-feature",
     "-deprecation",
     "-language:higherKinds",
-    "-language:implicitConversions"
+    "-language:implicitConversions",
+    "-language:experimental.macros"
   ),
 
   libraryDependencies ++= Seq(
+    "org.typelevel" %% "macro-compat" % "1.1.1",
+    scalaOrganization.value % "scala-reflect" % scalaVersion.value % Provided,
+    scalaOrganization.value % "scala-compiler" % scalaVersion.value % Provided,
     "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
     "org.scalatest" %%% "scalatest" % "3.0.0" % "test"
   ),
+
+  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
 
    // Publish settings
 
@@ -78,9 +83,8 @@ lazy val newtype = crossProject.in(file(".")).settings(Seq(
       username,
       password
     )
-    ).toSeq
-
-))
+  ).toSeq
+)
 
 lazy val newtypeJVM = newtype.jvm
 lazy val newtypeJS = newtype.js

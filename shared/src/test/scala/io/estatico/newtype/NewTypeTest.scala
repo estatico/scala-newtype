@@ -127,7 +127,8 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
     type Foo = Foo.Type
     object Foo extends NewType.Default[Int]
 
-    a [ClassCastException] should be thrownBy Array(Foo(1)).asInstanceOf[Array[Int]]
+    // JVM will throw ClassCastException, JS will throw UndefinedBehaviorError
+    a [Throwable] should be thrownBy Array(Foo(1)).asInstanceOf[Array[Int]]
 
     assertDoesNotCompile("Coercible[Array[Int], Array[Foo]]")
     assertDoesNotCompile("Coercible[Array[Foo], Array[Int]]")
