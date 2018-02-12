@@ -4,6 +4,7 @@ organization in ThisBuild := "io.estatico"
 
 lazy val root = project.in(file(".")).
   aggregate(newtypeJS, newtypeJVM).
+  dependsOn(newtypeJS, newtypeJVM).
   settings(
     publish := {},
     publishLocal := {}
@@ -26,8 +27,8 @@ lazy val newtype = crossProject.in(file(".")).settings(Seq(
   crossScalaVersions := List("2.11.12", "2.10.7", scalaVersion.value),
 
   libraryDependencies ++= Seq(
-    "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
-    "org.scalatest" %% "scalatest" % "3.0.0" % "test"
+    "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
+    "org.scalatest" %%% "scalatest" % "3.0.0" % "test"
   ),
 
       // Publish settings
