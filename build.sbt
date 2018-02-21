@@ -24,8 +24,6 @@ lazy val newtype = crossProject.in(file(".")).settings(Seq(
   ),
   scalaVersion in ThisBuild := "2.12.4",
 
-  crossScalaVersions := List("2.11.12", "2.10.7", scalaVersion.value),
-
   libraryDependencies ++= Seq(
     "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
     "org.scalatest" %%% "scalatest" % "3.0.0" % "test"
