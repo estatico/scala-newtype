@@ -22,14 +22,13 @@ lazy val newtype = crossProject.in(file(".")).settings(Seq(
     "-language:higherKinds",
     "-language:implicitConversions"
   ),
-  scalaVersion in ThisBuild := "2.12.4",
 
   libraryDependencies ++= Seq(
     "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
     "org.scalatest" %%% "scalatest" % "3.0.0" % "test"
   ),
 
-      // Publish settings
+   // Publish settings
 
   releaseCrossBuild := true,
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
