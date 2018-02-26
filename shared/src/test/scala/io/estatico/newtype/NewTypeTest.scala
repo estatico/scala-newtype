@@ -122,6 +122,17 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
     Foo(1).coerce[Bar] shouldEqual 1
     Bar(2).coerce[Foo] shouldEqual 2
   }
+
+  "Coercible" should "not allow coercion of Array types" in {
+    type Foo = Foo.Type
+    object Foo extends NewType.Default[Int]
+
+    // JVM will throw ClassCastException, JS will throw UndefinedBehaviorError
+    a [Throwable] should be thrownBy Array(Foo(1)).asInstanceOf[Array[Int]]
+
+    assertDoesNotCompile("Coercible[Array[Int], Array[Foo]]")
+    assertDoesNotCompile("Coercible[Array[Foo], Array[Int]]")
+  }
 }
 
 object NewTypeTest {
