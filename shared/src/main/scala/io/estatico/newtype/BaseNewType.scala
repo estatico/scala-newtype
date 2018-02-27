@@ -22,10 +22,16 @@ trait BaseNewType {
   @inline implicit def cannotUnwrapArrayAmbiguous2: Coercible[Array[Type], Array[Repr]] = Coercible.instance
 }
 
-object BaseNewType {
+// Scala 2.10 doesn't support abstract type aliases in object definitions, so
+// we have to create the abstract type alias Aux in a trait and have the
+// BaseNewType object extend from it.
+trait BaseNewType$Types {
   /** `Type` implementation for all newtypes; see `BaseNewType`. */
   type Aux[B, T, R] <: B with Meta[T, R]
   trait Meta[T, R]
+}
+
+object BaseNewType extends BaseNewType$Types {
 
   /** Helper trait to refine Repr via a type parameter. */
   trait Of[R] extends BaseNewType {
