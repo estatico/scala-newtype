@@ -1,6 +1,7 @@
 package io.estatico.newtype.macros
 
 import io.estatico.newtype.Coercible
+import scala.reflect.ClassTag
 import scala.reflect.macros.blackbox
 
 //noinspection TypeAnnotation
@@ -28,6 +29,9 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
 
   val CoercibleCls = typeOf[Coercible[Nothing, Nothing]].typeSymbol
   val CoercibleObj = CoercibleCls.companion
+  val ClassTagCls = typeOf[ClassTag[Nothing]].typeSymbol
+  val ClassTagObj = ClassTagCls.companion
+  val ObjectCls = typeOf[Object].typeSymbol
 
   // We need to know if the newtype is defined in an object so we can report
   // an error message if methods are defined on it (otherwise, the user will
@@ -297,9 +301,8 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
   def generateClassTag(
     name: TermName, tparamsNoVar: List[TypeDef], tparamNames: List[TypeName]
   ): Tree = {
-    val ClassTag = tq"_root_.scala.reflect.ClassTag"
-    val objectClassTag = q"_root_.scala.reflect.ClassTag(classOf[_root_.java.lang.Object])"
-    if (tparamsNoVar.isEmpty) q"implicit val $name: $ClassTag[Type] = $objectClassTag"
-    else q"implicit def $name[..$tparamsNoVar]: $ClassTag[Type[..$tparamNames]] = $objectClassTag"
+    val objectClassTag = q"$ClassTagObj(_root_.scala.Predef.classOf[$ObjectCls])"
+    if (tparamsNoVar.isEmpty) q"implicit val $name: $ClassTagCls[Type] = $objectClassTag"
+    else q"implicit def $name[..$tparamsNoVar]: $ClassTagCls[Type[..$tparamNames]] = $objectClassTag"
   }
 }
