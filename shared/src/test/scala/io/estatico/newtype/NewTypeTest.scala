@@ -54,6 +54,14 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
     (List(Foo(1)).coerce[List[Int]]: List[Int]) shouldEqual List(1)
   }
 
+  it should "work in Arrays" in {
+    type Foo = Foo.Type
+    object Foo extends NewType.Default[Int]
+
+    val foo = Foo(42)
+    Array(foo).head shouldEqual foo
+  }
+
   "NewTypeApply" should "automatically create an apply method" in {
     object PersonId extends NewType.Of[Int] with NewTypeApply
     PersonId(1) shouldEqual 1
@@ -108,6 +116,14 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
     (Foo(1).coerce[Int]: Int) shouldEqual 1
     (List(1).coerce[List[Foo]]: List[Foo]) shouldEqual List(1)
     (List(Foo(1)).coerce[List[Int]]: List[Int]) shouldEqual List(1)
+  }
+
+  it should "work in Arrays" in {
+    type Foo = Foo.Type
+    object Foo extends NewSubType.Default[Int]
+
+    val foo = Foo(-273)
+    Array(foo).head shouldEqual foo
   }
 
   "Coercible" should "work across newtypes" in {

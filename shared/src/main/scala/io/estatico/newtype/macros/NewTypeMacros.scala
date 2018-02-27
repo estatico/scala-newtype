@@ -1,6 +1,7 @@
 package io.estatico.newtype.macros
 
 import io.estatico.newtype.Coercible
+import scala.reflect.ClassTag
 import scala.reflect.macros.blackbox
 
 //noinspection TypeAnnotation
@@ -9,10 +10,15 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
 
   import c.universe._
 
-  def newtypeAnnotation(annottees: Tree*): Tree = annottees match {
-    case List(clsDef: ClassDef) => runClass(clsDef)
-    case List(clsDef: ClassDef, modDef: ModuleDef) => runClassWithObj(clsDef, modDef)
-    case _ => fail("Unsupported newtype definition")
+  def newtypeAnnotation(annottees: Tree*): Tree = {
+    val (name, result) = annottees match {
+      case List(clsDef: ClassDef) => (clsDef.name, runClass(clsDef))
+      case List(clsDef: ClassDef, modDef: ModuleDef) => (clsDef.name, runClassWithObj(clsDef, modDef))
+      case _ => fail("Unsupported newtype definition")
+    }
+    if (debug) println(s"Expanded @newtype $name:\n" ++ show(result))
+    if (debugRaw) println(s"Expanded @newtype $name (raw):\n" + showRaw(result))
+    result
   }
 
   // Support Flag values which are not available in Scala 2.10
@@ -23,12 +29,31 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
 
   val CoercibleCls = typeOf[Coercible[Nothing, Nothing]].typeSymbol
   val CoercibleObj = CoercibleCls.companion
+  val ClassTagCls = typeOf[ClassTag[Nothing]].typeSymbol
+  val ClassTagObj = ClassTagCls.companion
+  val ObjectCls = typeOf[Object].typeSymbol
 
   // We need to know if the newtype is defined in an object so we can report
   // an error message if methods are defined on it (otherwise, the user will
   // get a cryptic error of 'value class may not be a member of another class'
   // due to our generated extension methods.
   val isDefinedInObject = c.internal.enclosingOwner.isModuleClass
+
+  val macroName: Tree = {
+    c.prefix.tree match {
+      case Apply(Select(New(name), _), _) => name
+      case _ => c.abort(c.enclosingPosition, "Unexpected macro application")
+    }
+  }
+
+  val (debug, debugRaw) = c.prefix.tree match {
+    case q"new ${`macroName`}(..$args)" =>
+      (
+        args.collectFirst { case q"debug = true" => }.isDefined,
+        args.collectFirst { case q"debugRaw = true" => }.isDefined
+      )
+    case _ => (false, false)
+  }
 
   def fail(msg: String) = c.abort(c.enclosingPosition, msg)
 
@@ -59,45 +84,61 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
   ): Tree = {
     val q"object $objName extends { ..$objEarlyDefs } with ..$objParents { $objSelf => ..$objDefs }" = modDef
     val typeName = clsDef.name
+    val clsName = clsDef.name.decodedName
+    val typesTraitName = TypeName(clsName.toString + '$' + "Types")
     val tparams = clsDef.tparams
-    val baseRefinementName = TypeName(clsDef.name.decodedName + "$newtype")
+    val baseRefinementName = TypeName(clsName + "$newtype")
+    val classTagName = TermName(clsName + "$classTag")
     val companionExtraDefs =
-      maybeGenerateApplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) ++
-        maybeGenerateOpsDef(clsDef, valDef, tparamsNoVar, tparamNames) ++
-        generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) ++
+      generateClassTag(classTagName, tparamsNoVar, tparamNames) ::
+        maybeGenerateApplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
+        maybeGenerateOpsDef(clsDef, valDef, tparamsNoVar, tparamNames) :::
+        generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) :::
         generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild)
 
+    val newtypeObjParents = objParents :+ tq"$typesTraitName"
+    val newtypeObjDef = q"""
+      object $objName extends { ..$objEarlyDefs } with ..$newtypeObjParents { $objSelf =>
+        ..$objDefs
+        ..$companionExtraDefs
+      }
+    """
+    // Note that we use an abstract type alias
+    // `type Type <: Base with Tag` and not `type Type = ...` to prevent
+    // scalac automatically expanding the type alias.
+    // Also, Scala 2.10 doesn't support objects having abstract type members, so we have to
+    // use some indirection by defining the abstract type in a trait then having
+    // the companion object extend the trait.
+    // See https://github.com/scala/bug/issues/10750
     if (tparams.isEmpty) {
       q"""
-          type $typeName = $objName.Type
-          object $objName extends { ..$objEarlyDefs } with ..$objParents { $objSelf =>
-            ..$objDefs
-            type Repr = ${valDef.tpt}
-            type Base = { type $baseRefinementName }
-            trait Tag
-            type Type = Base with Tag
-            ..$companionExtraDefs
-          }
-        """
+        type $typeName = $objName.Type
+        trait $typesTraitName {
+          type Repr = ${valDef.tpt}
+          type Base = { type $baseRefinementName }
+          trait Tag
+          type Type <: Base with Tag
+        }
+        $newtypeObjDef
+      """
     } else {
       q"""
-          type $typeName[..$tparams] = ${typeName.toTermName}.Type[..$tparamNames]
-          object $objName extends { ..$objEarlyDefs } with ..$objParents { $objSelf =>
-            ..$objDefs
-            type Repr[..$tparams] = ${valDef.tpt}
-            type Base = { type $baseRefinementName }
-            trait Tag[..$tparams]
-            type Type[..$tparams] = Base with Tag[..$tparamNames]
-            ..$companionExtraDefs
-          }
-        """
+        type $typeName[..$tparams] = ${typeName.toTermName}.Type[..$tparamNames]
+        trait $typesTraitName {
+          type Repr[..$tparams] = ${valDef.tpt}
+          type Base = { type $baseRefinementName }
+          trait Tag[..$tparams]
+          type Type[..$tparams] <: Base with Tag[..$tparamNames]
+        }
+        $newtypeObjDef
+      """
     }
   }
 
   def maybeGenerateApplyMethod(
     clsDef: ClassDef, valDef: ValDef, tparamsNoVar: List[TypeDef], tparamNames: List[TypeName]
-  ): Option[Tree] = {
-    if (!clsDef.mods.hasFlag(Flag.CASE)) None else Some(
+  ): List[Tree] = {
+    if (!clsDef.mods.hasFlag(Flag.CASE)) Nil else List(
       if (tparamsNoVar.isEmpty) {
         q"def apply(${valDef.name}: ${valDef.tpt}): Type = ${valDef.name}.asInstanceOf[Type]"
       } else {
@@ -254,5 +295,14 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
     if (unsupported.nonEmpty) {
       fail(s"newtypes do not support inheritance; illegal supertypes: ${unsupported.mkString(", ")}")
     }
+  }
+
+  // The erasure of opaque newtypes is always Object.
+  def generateClassTag(
+    name: TermName, tparamsNoVar: List[TypeDef], tparamNames: List[TypeName]
+  ): Tree = {
+    val objectClassTag = q"$ClassTagObj(_root_.scala.Predef.classOf[$ObjectCls])"
+    if (tparamsNoVar.isEmpty) q"implicit val $name: $ClassTagCls[Type] = $objectClassTag"
+    else q"implicit def $name[..$tparamsNoVar]: $ClassTagCls[Type[..$tparamNames]] = $objectClassTag"
   }
 }
