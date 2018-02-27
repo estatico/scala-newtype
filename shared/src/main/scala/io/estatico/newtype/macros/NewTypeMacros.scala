@@ -80,13 +80,16 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
   ): Tree = {
     val q"object $objName extends { ..$objEarlyDefs } with ..$objParents { $objSelf => ..$objDefs }" = modDef
     val typeName = clsDef.name
-    val typesTraitName = TypeName(typeName.decodedName.toString + '$' + "Types")
+    val clsName = clsDef.name.decodedName
+    val typesTraitName = TypeName(clsName.toString + '$' + "Types")
     val tparams = clsDef.tparams
-    val baseRefinementName = TypeName(clsDef.name.decodedName + "$newtype")
+    val baseRefinementName = TypeName(clsName + "$newtype")
+    val classTagName = TermName(clsName + "$classTag")
     val companionExtraDefs =
-      maybeGenerateApplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) ++
-        maybeGenerateOpsDef(clsDef, valDef, tparamsNoVar, tparamNames) ++
-        generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) ++
+      generateClassTag(classTagName, tparamsNoVar, tparamNames) ::
+        maybeGenerateApplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
+        maybeGenerateOpsDef(clsDef, valDef, tparamsNoVar, tparamNames) :::
+        generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) :::
         generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild)
 
     val newtypeObjParents = objParents :+ tq"$typesTraitName"
@@ -130,8 +133,8 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
 
   def maybeGenerateApplyMethod(
     clsDef: ClassDef, valDef: ValDef, tparamsNoVar: List[TypeDef], tparamNames: List[TypeName]
-  ): Option[Tree] = {
-    if (!clsDef.mods.hasFlag(Flag.CASE)) None else Some(
+  ): List[Tree] = {
+    if (!clsDef.mods.hasFlag(Flag.CASE)) Nil else List(
       if (tparamsNoVar.isEmpty) {
         q"def apply(${valDef.name}: ${valDef.tpt}): Type = ${valDef.name}.asInstanceOf[Type]"
       } else {
@@ -288,5 +291,15 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
     if (unsupported.nonEmpty) {
       fail(s"newtypes do not support inheritance; illegal supertypes: ${unsupported.mkString(", ")}")
     }
+  }
+
+  // The erasure of opaque newtypes is always Object.
+  def generateClassTag(
+    name: TermName, tparamsNoVar: List[TypeDef], tparamNames: List[TypeName]
+  ): Tree = {
+    val ClassTag = tq"_root_.scala.reflect.ClassTag"
+    val objectClassTag = q"_root_.scala.reflect.ClassTag(classOf[_root_.java.lang.Object])"
+    if (tparamsNoVar.isEmpty) q"implicit val $name: $ClassTag[Type] = $objectClassTag"
+    else q"implicit def $name[..$tparamsNoVar]: $ClassTag[Type[..$tparamNames]] = $objectClassTag"
   }
 }

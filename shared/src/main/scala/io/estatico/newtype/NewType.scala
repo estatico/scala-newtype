@@ -14,7 +14,7 @@ object NewType {
 trait NewTypeAutoOps extends BaseNewType {
   implicit def toNewTypeOps(
     x: Type
-  ): NewTypeOps[Type, Tag, Repr] = new NewTypeOps[Type, Tag, Repr](x)
+  ): NewTypeOps[Base, Tag, Repr] = new NewTypeOps[Base, Tag, Repr](x)
 }
 
 trait NewTypeApply extends BaseNewType {
