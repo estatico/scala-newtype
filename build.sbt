@@ -3,39 +3,39 @@ import ReleaseTransformations._
 organization in ThisBuild := "io.estatico"
 
 lazy val root = project.in(file("."))
-  .aggregate(newtypeJS, newtypeJVM)
-  .dependsOn(newtypeJS, newtypeJVM)
+  .aggregate(newtypeJS, newtypeJVM, catsTestsJVM, catsTestsJS)
+  .settings(noPublishSettings)
+
+lazy val newtype = crossProject.in(file("."))
+  .settings(defaultSettings)
+  .settings(releasePublishSettings)
+  .settings(name := "newtype")
+
+lazy val newtypeJVM = newtype.jvm
+lazy val newtypeJS = newtype.js
+
+lazy val catsTests = crossProject.in(file("cats-tests"))
+  .dependsOn(newtype)
+  .settings(defaultSettings)
+  .settings(noPublishSettings)
   .settings(
-    publish := (),
-    publishLocal := (),
-    publishArtifact := false
+    name := "newtype-cats-tests",
+    description := "Test suite for newtype + cats interop",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % "1.0.1"
+    )
   )
 
-lazy val newtype = crossProject.in(file(".")).settings(
-  name := "newtype",
+lazy val catsTestsJVM = catsTests.jvm
+lazy val catsTestsJS = catsTests.js
 
-  scalacOptions ++= Seq(
-    "-Xfatal-warnings",
-    "-unchecked",
-    "-feature",
-    "-deprecation",
-    "-language:higherKinds",
-    "-language:implicitConversions",
-    "-language:experimental.macros"
-  ),
+lazy val noPublishSettings = Seq(
+  publish := (),
+  publishLocal := (),
+  publishArtifact := false
+)
 
-  libraryDependencies ++= Seq(
-    "org.typelevel" %% "macro-compat" % "1.1.1",
-    scalaOrganization.value % "scala-reflect" % scalaVersion.value % Provided,
-    scalaOrganization.value % "scala-compiler" % scalaVersion.value % Provided,
-    "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
-    "org.scalatest" %%% "scalatest" % "3.0.0" % "test"
-  ),
-
-  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
-
-  // Publish settings
-
+lazy val releasePublishSettings = Seq(
   releaseCrossBuild := true,
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
   releaseProcess := Seq[ReleaseStep](
@@ -87,5 +87,26 @@ lazy val newtype = crossProject.in(file(".")).settings(
   ).toSeq
 )
 
-lazy val newtypeJVM = newtype.jvm
-lazy val newtypeJS = newtype.js
+lazy val defaultSettings = Seq(
+  defaultScalacOptions,
+  defaultLibraryDependencies,
+  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+)
+
+lazy val defaultScalacOptions = scalacOptions ++= Seq(
+  "-Xfatal-warnings",
+  "-unchecked",
+  "-feature",
+  "-deprecation",
+  "-language:higherKinds",
+  "-language:implicitConversions",
+  "-language:experimental.macros"
+)
+
+lazy val defaultLibraryDependencies = libraryDependencies ++= Seq(
+  "org.typelevel" %% "macro-compat" % "1.1.1",
+  scalaOrganization.value % "scala-reflect" % scalaVersion.value % Provided,
+  scalaOrganization.value % "scala-compiler" % scalaVersion.value % Provided,
+  "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
+  "org.scalatest" %%% "scalatest" % "3.0.0" % "test"
+)

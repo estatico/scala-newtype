@@ -346,7 +346,9 @@ object NewTypeMacrosTest {
     def map[A, B](fa: F[A])(f: A => B): F[B]
   }
 
-  implicit val listFunctor: Functor[List] = new Functor[List] {
-    override def map[A, B](fa: List[A])(f: A => B): List[B] = fa.map(f)
+  object Functor {
+    implicit val list: Functor[List] = new Functor[List] {
+      override def map[A, B](fa: List[A])(f: A => B): List[B] = fa.map(f)
+    }
   }
 }
