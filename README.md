@@ -47,7 +47,7 @@ package object types {
     type Repr = Int
     type Base = { type WidgetId$newtype }
     trait Tag
-    type Type = Base with Tag
+    type Type <: Base with Tag
 
     def apply(x: Int): WidgetId = x.asInstanceOf[WidgetId]
 
