@@ -80,6 +80,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
   ): Tree = {
     val q"object $objName extends { ..$objEarlyDefs } with ..$objParents { $objSelf => ..$objDefs }" = modDef
     val typeName = clsDef.name
+    val typesTraitName = TypeName(typeName.decodedName.toString + '$' + "Types")
     val tparams = clsDef.tparams
     val baseRefinementName = TypeName(clsDef.name.decodedName + "$newtype")
     val companionExtraDefs =
@@ -88,30 +89,42 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
         generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) ++
         generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild)
 
+    val newtypeObjParents = objParents :+ tq"$typesTraitName"
+    val newtypeObjDef = q"""
+      object $objName extends { ..$objEarlyDefs } with ..$newtypeObjParents { $objSelf =>
+        ..$objDefs
+        ..$companionExtraDefs
+      }
+    """
+    // Note that we use an abstract type alias
+    // `type Type <: Base with Tag` and not `type Type = ...` to prevent
+    // scalac automatically expanding the type alias.
+    // Also, Scala 2.10 doesn't support objects having abstract type members, so we have to
+    // use some indirection by defining the abstract type in a trait then having
+    // the companion object extend the trait.
+    // See https://github.com/scala/bug/issues/10750
     if (tparams.isEmpty) {
       q"""
-          type $typeName = $objName.Type
-          object $objName extends { ..$objEarlyDefs } with ..$objParents { $objSelf =>
-            ..$objDefs
-            type Repr = ${valDef.tpt}
-            type Base = { type $baseRefinementName }
-            trait Tag
-            type Type = Base with Tag
-            ..$companionExtraDefs
-          }
-        """
+        type $typeName = $objName.Type
+        trait $typesTraitName {
+          type Repr = ${valDef.tpt}
+          type Base = { type $baseRefinementName }
+          trait Tag
+          type Type <: Base with Tag
+        }
+        $newtypeObjDef
+      """
     } else {
       q"""
-          type $typeName[..$tparams] = ${typeName.toTermName}.Type[..$tparamNames]
-          object $objName extends { ..$objEarlyDefs } with ..$objParents { $objSelf =>
-            ..$objDefs
-            type Repr[..$tparams] = ${valDef.tpt}
-            type Base = { type $baseRefinementName }
-            trait Tag[..$tparams]
-            type Type[..$tparams] = Base with Tag[..$tparamNames]
-            ..$companionExtraDefs
-          }
-        """
+        type $typeName[..$tparams] = ${typeName.toTermName}.Type[..$tparamNames]
+        trait $typesTraitName {
+          type Repr[..$tparams] = ${valDef.tpt}
+          type Base = { type $baseRefinementName }
+          trait Tag[..$tparams]
+          type Type[..$tparams] <: Base with Tag[..$tparamNames]
+        }
+        $newtypeObjDef
+      """
     }
   }
 
