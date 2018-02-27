@@ -2,12 +2,13 @@ import ReleaseTransformations._
 
 organization in ThisBuild := "io.estatico"
 
-lazy val root = project.in(file(".")).
-  aggregate(newtypeJS, newtypeJVM).
-  dependsOn(newtypeJS, newtypeJVM).
-  settings(
-    publish := {},
-    publishLocal := {}
+lazy val root = project.in(file("."))
+  .aggregate(newtypeJS, newtypeJVM)
+  .dependsOn(newtypeJS, newtypeJVM)
+  .settings(
+    publish := (),
+    publishLocal := (),
+    publishArtifact := false
   )
 
 lazy val newtype = crossProject.in(file(".")).settings(
@@ -33,7 +34,7 @@ lazy val newtype = crossProject.in(file(".")).settings(
 
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
 
-   // Publish settings
+  // Publish settings
 
   releaseCrossBuild := true,
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
