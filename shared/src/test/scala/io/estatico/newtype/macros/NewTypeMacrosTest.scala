@@ -45,6 +45,11 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     res shouldBe 4
   }
 
+  it should "work in arrays" in {
+    val foo = Foo(313)
+    Array(foo).head shouldBe foo
+  }
+
   behavior of "@newtype class"
 
   it should "not expose a default constructor" in {
@@ -97,6 +102,12 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
 
     someOrZero(x) shouldBe List(1)
     someOrZero(y) shouldBe List(0)
+  }
+
+  it should "work in arrays" in {
+    val repr = Set(Option("newtypes"))
+    val ot = OptionT(repr)
+    Array(ot).head shouldBe ot
   }
 
   behavior of "@newtype with type bounds"

@@ -1,5 +1,7 @@
 package io.estatico.newtype
 
+import scala.reflect.ClassTag
+
 /** Base skeleton for building newtypes. */
 trait BaseNewType {
   type Base
@@ -22,11 +24,15 @@ trait BaseNewType {
 
 object BaseNewType {
   /** `Type` implementation for all newtypes; see `BaseNewType`. */
-  type Aux[B, T, R] = B with Meta[T, R]
+  type Aux[B, T, R] <: B with Meta[T, R]
   trait Meta[T, R]
 
   /** Helper trait to refine Repr via a type parameter. */
   trait Of[R] extends BaseNewType {
     final type Repr = R
   }
+
+  // Since Aux is abstract, this is necessary to make Arrays work.
+  @inline implicit def classTag[B, T, R](implicit base: ClassTag[B]): ClassTag[Aux[B, T, R]] =
+    ClassTag(base.runtimeClass)
 }
