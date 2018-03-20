@@ -101,8 +101,8 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     (clsDef.tparams, subtype) match {
       case (Nil, false) =>     q"type Type             <: Base with Tag"
       case (tparams, false) => q"type Type[..$tparams] <: Base with Tag[..$tparamsNames]"
-      case (Nil, true)  =>     q"type Type             =  Base with Tag"
-      case (tparams, true) =>  q"type Type[..$tparams] =  Base[..$tparamsNames] with Tag[..$tparamsNames]"
+      case (Nil, true)  =>     q"type Type             <: Base with Tag"
+      case (tparams, true) =>  q"type Type[..$tparams] <: Base[..$tparamsNames] with Tag[..$tparamsNames]"
     }
 
   def generateNewType(
