@@ -234,7 +234,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
           q"""
               implicit final class Ops$$newtype[..${clsDef.tparams}](
                 val $$this$$: Type[..$tparamNames]
-              ) extends AnyVal {
+              ) extends $opsClsParent {
                 ..$extensionMethods
               }
             """,
@@ -335,9 +335,22 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     name: TermName, valDef: ValDef, tparamsNoVar: List[TypeDef], tparamNames: List[TypeName],
     subtype: Boolean
   ): Tree = {
-    val classTagType = if (subtype) valDef.tpt else tq"$ObjectCls"
-    val myClassTag = q"$ClassTagObj(_root_.scala.Predef.classOf[$classTagType])"
-    if (tparamsNoVar.isEmpty) q"implicit val $name: $ClassTagCls[Type] = $myClassTag"
-    else q"implicit def $name[..$tparamsNoVar]: $ClassTagCls[Type[..$tparamNames]] = $myClassTag"
+    def mkClassTag(t: Tree) = q"implicitly[$ClassTagCls[$t]]"
+    def objClassTag = mkClassTag(tq"$ObjectCls")
+    (tparamsNoVar, subtype) match {
+      case (Nil, false) =>
+        q"implicit def $name: $ClassTagCls[Type] = $objClassTag.asInstanceOf[$ClassTagCls[Type]]"
+      case (ts, false) =>
+        q"""implicit def $name[..$ts]: $ClassTagCls[Type[..$tparamNames]] =
+              $objClassTag.asInstanceOf[$ClassTagCls[Type[..$tparamNames]]]"""
+      case (Nil, true) =>
+        q"""implicit def $name(implicit ct: $ClassTagCls[${valDef.tpt}]): $ClassTagCls[Type] =
+              ct.asInstanceOf[$ClassTagCls[Type]]"""
+      case (ts, true) =>
+        q"""implicit def $name[..$ts](
+              implicit ct: $ClassTagCls[${valDef.tpt}]
+            ): $ClassTagCls[Type[..$tparamNames]] =
+              ct.asInstanceOf[$ClassTagCls[Type[..$tparamNames]]]"""
+    }
   }
 }

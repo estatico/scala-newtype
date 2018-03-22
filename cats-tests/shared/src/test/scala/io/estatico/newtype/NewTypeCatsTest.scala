@@ -45,6 +45,14 @@ class NewTypeCatsTest extends FlatSpec with Matchers {
     testNelTypeAliasExpansion shouldBe testNelTypeAliasExpansionExpectedResult
   }
 
+  "Monoid[Nel[A]]" should "work" in {
+    Nel.of(1, 2, 3).combine(Nel.of(4, 5, 6)) shouldBe Nel.of(1, 2, 3, 4, 5, 6)
+  }
+
+  "Show[Nel]" should "work" in {
+    Nel.of(1, 2, 3).show shouldBe "Nel(1,2,3)"
+  }
+
   "Monoid[Sum]" should "work" in {
     Monoid[Sum].empty shouldBe 0
     List(2, 3, 4).coerce[List[Sum]].combineAll shouldBe 9
@@ -53,6 +61,65 @@ class NewTypeCatsTest extends FlatSpec with Matchers {
   "Monoid[Prod]" should "work" in {
     Monoid[Prod].empty shouldBe 1
     List(2, 3, 4).coerce[List[Prod]].combineAll shouldBe 24
+  }
+
+  "Monoid[SumN[A]]" should "work" in {
+    Monoid[SumN[Double]].empty shouldBe 0d
+    List(2d, 3d, 4d).coerce[List[SumN[Double]]].combineAll shouldBe 9d
+  }
+
+  "Monoid[ProdN[A]]" should "work" in {
+    Monoid[ProdN[Double]].empty shouldBe 1d
+    List(2d, 3d, 4d).coerce[List[ProdN[Double]]].combineAll shouldBe 24d
+  }
+
+  behavior of "SubNel[A]"
+
+  it should "be a subtype of List[A]" in {
+    def unsafeHead[A](xs: List[A]) = xs.head
+    unsafeHead(SubNel.of(1, 2, 3)) shouldBe 1
+
+    def sum(xs: List[Int]) = xs.sum
+    sum(SubNel.of(1, 2, 3)) shouldBe 6
+  }
+
+  behavior of "Functor[SubNel]"
+
+  it should "be the same as Functor[List]" in {
+    Functor[SubNel] shouldBe Functor[List]
+  }
+
+  it should "get extension methods" in {
+    SubNel.of(1, 2, 3).map(_ * 2) shouldBe SubNel.of(2, 4, 6)
+  }
+
+  behavior of "Monad[SubNel]"
+
+  it should "be the same as Monad[List]" in {
+    Monad[SubNel] shouldBe Monad[List]
+  }
+
+  it should "get extension methods" in {
+    1.pure[SubNel] shouldBe SubNel.of(1)
+    SubNel.of(1, 2, 3).flatMap(x => SubNel.of(x, x * 2)) shouldBe
+      SubNel.of(1, 2, 2, 4, 3, 6)
+  }
+
+  it should "work in for comprehensions" in {
+    val res = for {
+      x <- SubNel.of(1, 2, 3)
+      y <- SubNel.of(x, x * 2)
+    } yield x + y
+
+    res shouldBe SubNel.of(2, 3, 4, 6, 6, 9)
+  }
+
+  it should "work in the same scope in which it is defined" in {
+    testSubNelTypeAliasExpansion shouldBe testSubNelTypeAliasExpansionExpectedResult
+  }
+
+  "Monoid[SubNel[A]]" should "work" in {
+    SubNel.of(1, 2, 3).combine(SubNel.of(4, 5, 6)) shouldBe SubNel.of(1, 2, 3, 4, 5, 6)
   }
 }
 
@@ -96,4 +163,44 @@ object NewTypeCatsTest {
       override def combine(x: Prod, y: Prod): Prod = Prod(x.value * y.value)
     }
   }
+
+  @newsubtype case class SumN[A](value: A)
+  object SumN {
+    implicit def monoid[A](implicit A: Numeric[A]): Monoid[SumN[A]] = new Monoid[SumN[A]] {
+      override def empty: SumN[A] = SumN[A](A.fromInt(0))
+      override def combine(x: SumN[A], y: SumN[A]): SumN[A] = SumN[A](A.plus(x, y))
+    }
+  }
+
+  @newsubtype case class ProdN[A](value: A)
+  object ProdN {
+    implicit def monoid[A](implicit A: Numeric[A]): Monoid[ProdN[A]] = new Monoid[ProdN[A]] {
+      override def empty: ProdN[A] = ProdN[A](A.fromInt(1))
+      override def combine(x: ProdN[A], y: ProdN[A]): ProdN[A] = ProdN[A](A.times(x, y))
+    }
+  }
+
+  /** Same as [[Nel]] except also a subtype of List[A] */
+  @newsubtype case class SubNel[A](toList: List[A]) {
+    def head: A = toList.head
+    def tail: List[A] = toList.tail
+    def iterator: Iterator[A] = toList.iterator
+  }
+  object SubNel {
+    def apply[A](head: A, tail: List[A]): SubNel[A] = (head +: tail).coerce
+    def of[A](head: A, tail: A*): SubNel[A] = (head +: tail.toList).coerce
+    implicit def show[A](implicit A: Show[A]): Show[SubNel[A]] = new Show[SubNel[A]] {
+      def show(nel: SubNel[A]): String = "SubNel(" + nel.iterator.map(A.show).mkString(",") + ")"
+    }
+    implicit def monoid[A]: Monoid[SubNel[A]] = deriving
+    implicit val monad: Monad[SubNel] = derivingK
+  }
+
+  // See https://github.com/scala/bug/issues/10750
+  private val testSubNelTypeAliasExpansion = for {
+    x <- SubNel.of(1, 2, 3)
+    y <- SubNel.of(x, x * 2)
+  } yield x + y
+
+  private val testSubNelTypeAliasExpansionExpectedResult = SubNel.of(2, 3, 4, 6, 6, 9)
 }
