@@ -56,13 +56,14 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     }
   }
 
-  val (debug, debugRaw) = c.prefix.tree match {
+  val (optimizeOps, debug, debugRaw) = c.prefix.tree match {
     case q"new ${`macroName`}(..$args)" =>
       (
+        args.collectFirst { case q"optimizeOps = false" => }.isEmpty,
         args.collectFirst { case q"debug = true" => }.isDefined,
         args.collectFirst { case q"debugRaw = true" => }.isDefined
       )
-    case _ => (false, false)
+    case _ => (true, false, false)
   }
 
   def fail(msg: String) = c.abort(c.enclosingPosition, msg)
@@ -199,7 +200,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
   ): Option[Tree] = {
     if (!shouldGenerateValMethod(clsDef, valDef)) {
       None
-    } else if (!isDefinedInObject) {
+    } else if (!isDefinedInObject && optimizeOps) {
       c.abort(valDef.pos, s"""
         |Fields can only be defined for newtypes defined in an object
         |Consider defining as: private val ${valDef.name.decodedName}
@@ -218,12 +219,13 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     if (extensionMethods.isEmpty) {
       Nil
     } else {
+      val parent = if (optimizeOps) opsClsParent else typeOf[AnyRef].typeSymbol
       // Note that we generate the implicit class for extension methods and the
       // implicit def to convert `this` used in the Ops to our newtype value.
       if (clsDef.tparams.isEmpty) {
         List(
           q"""
-              implicit final class Ops$$newtype(val $$this$$: Type) extends $opsClsParent {
+              implicit final class Ops$$newtype(val $$this$$: Type) extends $parent {
                 ..$extensionMethods
               }
             """,
@@ -234,7 +236,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
           q"""
               implicit final class Ops$$newtype[..${clsDef.tparams}](
                 val $$this$$: Type[..$tparamNames]
-              ) extends $opsClsParent {
+              ) extends $parent {
                 ..$extensionMethods
               }
             """,
@@ -316,7 +318,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
       case x =>
         c.abort(x.pos, s"illegal definition in newtype: $x")
     }
-    if (res.nonEmpty && !isDefinedInObject) {
+    if (res.nonEmpty && !isDefinedInObject && optimizeOps) {
       c.abort(res.head.pos, "Methods can only be defined for newtypes defined in an object")
     }
     res
