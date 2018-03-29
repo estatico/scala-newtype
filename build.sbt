@@ -10,6 +10,7 @@ lazy val newtype = crossProject.in(file("."))
   .settings(defaultSettings)
   .settings(releasePublishSettings)
   .settings(name := "newtype")
+  .settings(crossVersionSharedSources)
 
 lazy val newtypeJVM = newtype.jvm
 lazy val newtypeJS = newtype.js
@@ -110,3 +111,17 @@ lazy val defaultLibraryDependencies = libraryDependencies ++= Seq(
   "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
   "org.scalatest" %%% "scalatest" % "3.0.0" % "test"
 )
+
+def scalaPartV = Def.setting(CrossVersion.partialVersion(scalaVersion.value))
+
+lazy val crossVersionSharedSources: Seq[Setting[_]] =
+  Seq(Compile, Test).map { sc =>
+    (unmanagedSourceDirectories in sc) ++= {
+      (unmanagedSourceDirectories in sc).value.map { dir =>
+        scalaPartV.value match {
+          case Some((2, y)) if y == 10 => new File(dir.getPath + "_2.10")
+          case Some((2, y)) if y >= 11 => new File(dir.getPath + "_2.11+")
+        }
+      }
+    }
+  }
