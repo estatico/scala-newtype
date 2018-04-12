@@ -44,7 +44,6 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     val res: Bar = Bar(2).twice
     res shouldBe 4
   }
-
   it should "work in arrays" in {
     val foo = Foo(313)
     Array(foo).head shouldBe foo
@@ -299,6 +298,22 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     val z = Id(2).flatMap(x => Id(x * 2))
     z shouldBe 4
     assertCompiles("z: Id[Int]")
+  }
+
+  behavior of "optimizeOps = false"
+
+  it should "work with @newtype" in {
+    @newtype(optimizeOps = false) case class Foo(value: Int)
+    Foo(1: Int).value shouldBe 1
+    @newtype(optimizeOps = false) case class Bar[A](value: A)
+    Bar("foo").value shouldBe "foo"
+  }
+
+  it should "work with @newsubtype" in {
+    @newsubtype(optimizeOps = false) case class Foo(value: Int)
+    Foo(1: Int).value shouldBe 1
+    @newsubtype(optimizeOps = false) case class Bar[A](value: A)
+    Bar("foo").value shouldBe "foo"
   }
 }
 
