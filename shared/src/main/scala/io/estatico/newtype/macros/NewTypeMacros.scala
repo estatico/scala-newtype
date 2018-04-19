@@ -174,11 +174,11 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
   ): List[Tree] = {
     if (!clsDef.mods.hasFlag(Flag.CASE)) Nil else List(
       if (tparamsNoVar.isEmpty) {
-        q"def apply(${valDef.name}: ${valDef.tpt}): Type = ${valDef.name}.asInstanceOf[Type]"
+        q"def apply(${valDef.name}: ${valDef.tpt}): ${clsDef.name} = ${valDef.name}.asInstanceOf[${clsDef.name}]"
       } else {
         q"""
-          def apply[..$tparamsNoVar](${valDef.name}: ${valDef.tpt}): Type[..$tparamNames] =
-            ${valDef.name}.asInstanceOf[Type[..$tparamNames]]
+          def apply[..$tparamsNoVar](${valDef.name}: ${valDef.tpt}): ${clsDef.name}[..$tparamNames] =
+            ${valDef.name}.asInstanceOf[${clsDef.name}[..$tparamNames]]
         """
       }
     )
