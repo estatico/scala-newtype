@@ -176,21 +176,24 @@ object Nel {
 ### Generic Instances
 
 In some cases, you want to generically provide instances for a certain type class for
-all new types based of a certain type. You can take advantage of the `Coercible`
-type class to achieve that. Here is an example of providing `Numeric` instances
-to all new types of `Int`
+all new types based. You can take advantage of the `Coercible`
+type class to achieve that.
+
+Here is an example to provide `Eq` instances for all new type using `Eq` instances of base type. 
 
 ```scala
-scala> implicit def coercibleNumericInt[A](implicit ev: Coercible[Int, A]): Numeric[A] =
-         implicitly[Numeric[Int]].asInstanceOf[Numeric[A]]
-
+scala> implicit def coercibleEq[A, B](implicit ev: Coercible[Eq[A], Eq[B]], A: Eq[A]): Eq[B] =
+    A.asInstanceOf[Eq[B]]
+    
 scala> @newtype case class Foo(x: Int)
 
-scala> import Numeric.Implicits._
+scala> import cats.implicits._
 
-scala> Foo(1) + Foo(2)
-res0: Foo.Type = 3
+scala> Foo(1) === Foo(2)
+res0: Boolean = false
 ```
+
+
 
 ### Legacy encoding
 
