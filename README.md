@@ -183,7 +183,7 @@ Here is an example to provide `Eq` instances for all new type using `Eq` instanc
 
 ```scala
 scala> implicit def coercibleEq[A, B](implicit ev: Coercible[Eq[A], Eq[B]], A: Eq[A]): Eq[B] =
-    A.asInstanceOf[Eq[B]]
+    ev([Eq[B]])
     
 scala> @newtype case class Foo(x: Int)
 
