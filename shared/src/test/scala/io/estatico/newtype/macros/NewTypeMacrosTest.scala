@@ -1,5 +1,6 @@
 package io.estatico.newtype.macros
 
+import io.estatico.newtype.arrays.AsArray
 import org.scalatest.{FlatSpec, Matchers}
 import io.estatico.newtype.ops._
 import org.scalacheck.Arbitrary
@@ -39,9 +40,7 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
 
   it should "work in arrays" in {
     val foo = Foo(313)
-    // See https://github.com/estatico/scala-newtype/issues/25
-    // Array(foo).head shouldBe foo
-    Array[Int](313).asInstanceOf[Array[Foo]].head shouldBe foo
+    AsArray(foo).head shouldBe foo
   }
 
   behavior of "@newtype class"
@@ -101,9 +100,7 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
   it should "work in arrays" in {
     val repr = Set(Option("newtypes"))
     val ot = OptionT(repr)
-    // See https://github.com/estatico/scala-newtype/issues/25
-    // Array(ot).head shouldBe ot
-    Array(repr).asInstanceOf[Array[OptionT[Set, String]]].head shouldBe ot
+    AsArray(ot).head shouldBe ot
   }
 
   behavior of "@newtype with type bounds"

@@ -1,6 +1,7 @@
 package io.estatico.newtype.macros
 
 import io.estatico.newtype.Coercible
+import io.estatico.newtype.arrays.AsArray
 import scala.reflect.ClassTag
 import scala.reflect.macros.blackbox
 
@@ -39,8 +40,8 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
 
   val CoercibleCls = typeOf[Coercible[Nothing, Nothing]].typeSymbol
   val CoercibleObj = CoercibleCls.companion
+  val AsArrayObj = q"io.estatico.newtype.arrays.AsArray"
   val ClassTagCls = typeOf[ClassTag[Nothing]].typeSymbol
-  val ClassTagObj = ClassTagCls.companion
   val ObjectCls = typeOf[Object].typeSymbol
 
   // We need to know if the newtype is defined in an object so we can report
@@ -123,7 +124,8 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
       maybeGenerateUnapplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
       maybeGenerateOpsDef(clsDef, valDef, tparamsNoVar, tparamNames) :::
       generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) :::
-      generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild)
+      generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild) :::
+      List(generateAsArrayInstance(clsDef, valDef, tparamsNoVar, tparamNames))
 
     val newtypeObjParents = objParents :+ tq"$typesTraitName"
     val newtypeObjDef = q"""
@@ -318,6 +320,36 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     )
   }
 
+  def generateAsArrayInstance(
+    clsDef: ClassDef, valDef: ValDef, tparamsNoVar: List[TypeDef], tparamNames: List[TypeName]
+  ): Tree = {
+    val Repr = tq"${valDef.tpt}"
+    val Type = if (tparamNames.isEmpty) tq"${clsDef.name}" else tq"${clsDef.name}[..$tparamNames]"
+    //val clsTagType = if (tparamNames.isEmpty) Repr else tq"$Repr forSome { ..$tparamsNoVar }"
+    summonImplicit(tq"$ClassTagCls[$Repr]") match {
+      case Some(Typed(ct, _)) =>
+        if (tparamNames.isEmpty) {
+          q"""implicit def asArray: $AsArrayObj.Aux[$Type, $Repr] =
+                $AsArrayObj.unsafeDerive[$Type, $Repr]($ct)"""
+        } else {
+          q"""implicit def asArray[..$tparamsNoVar]: $AsArrayObj.Aux[$Type, $Repr] =
+                $AsArrayObj.unsafeDerive[$Type, $Repr]($ct)"""
+        }
+      case _ =>
+        if (tparamsNoVar.isEmpty) {
+          q"""implicit def asArray(
+                implicit ct: $ClassTagCls[$Repr]
+              ): $AsArrayObj.Aux[$Type, $Repr] =
+                $AsArrayObj.unsafeDerive[$Type, $Repr]"""
+        } else {
+          q"""implicit def asArray[..$tparamsNoVar](
+              implicit ct: $ClassTagCls[$Repr]
+            ): $AsArrayObj.Aux[$Type, $Repr] =
+              $AsArrayObj.unsafeDerive[$Type, $Repr]"""
+        }
+    }
+  }
+
   def getConstructor(body: List[Tree]): DefDef = body.collectFirst {
     case dd: DefDef if dd.name == termNames.CONSTRUCTOR => dd
   }.getOrElse(fail("Failed to locate constructor"))
@@ -348,6 +380,15 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     val unsupported = parents.filterNot(t => ignoredExtends.exists(t.equalsStructure))
     if (unsupported.nonEmpty) {
       fail(s"newtypes do not support inheritance; illegal supertypes: ${unsupported.mkString(", ")}")
+    }
+  }
+
+    /** Return the implicit value, if exists, for the given type `tpt`. */
+  def summonImplicit(tpt: Tree): Option[Tree] = {
+    val typeResult = c.typecheck(tpt, c.TYPEmode, silent = true)
+    if (typeResult.isEmpty) None else {
+      val implicitResult = c.inferImplicitValue(typeResult.tpe)
+      if (implicitResult.isEmpty) None else Some(implicitResult)
     }
   }
 }
