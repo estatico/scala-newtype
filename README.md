@@ -188,7 +188,7 @@ import cats._, cats.implicits._
 
 /** If we have an Eq instance for Repr type R, derive an Eq instance for  NewType N. */
 implicit def coercibleEq[R, N](implicit ev: Coercible[Eq[R], Eq[N]], R: Eq[R]): Eq[N] =
-  ev([Eq[R]])
+  ev(R)
 
 @newtype case class Foo(x: Int)
 
