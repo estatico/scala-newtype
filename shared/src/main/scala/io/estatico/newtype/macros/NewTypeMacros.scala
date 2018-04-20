@@ -56,14 +56,15 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     }
   }
 
-  val (optimizeOps, debug, debugRaw) = c.prefix.tree match {
+  val (optimizeOps, unapply, debug, debugRaw) = c.prefix.tree match {
     case q"new ${`macroName`}(..$args)" =>
       (
         args.collectFirst { case q"optimizeOps = false" => }.isEmpty,
+        args.collectFirst { case q"unapply = true" => }.isDefined,
         args.collectFirst { case q"debug = true" => }.isDefined,
         args.collectFirst { case q"debugRaw = true" => }.isDefined
       )
-    case _ => (true, false, false)
+    case _ => (true, false, false, false)
   }
 
   def fail(msg: String) = c.abort(c.enclosingPosition, msg)
@@ -121,6 +122,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     val companionExtraDefs =
       generateClassTag(classTagName, valDef, tparamsNoVar, tparamNames, subtype) ::
         maybeGenerateApplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
+        maybeGenerateUnapplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
         maybeGenerateOpsDef(clsDef, valDef, tparamsNoVar, tparamNames) :::
         generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) :::
         generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild)
@@ -182,6 +184,23 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
         """
       }
     )
+  }
+
+  def maybeGenerateUnapplyMethod(
+    clsDef: ClassDef, valDef: ValDef, tparamsNoVar: List[TypeDef], tparamNames: List[TypeName]
+  ): List[Tree] = {
+    if (!unapply) Nil else {
+      // Note that our unapply method should Some since its isEmpty/get is constant.
+      List(
+        if (tparamsNoVar.isEmpty) {
+          q"""def unapply(x: ${clsDef.name}): Some[${valDef.tpt}] =
+              Some(x.asInstanceOf[${valDef.tpt}])"""
+        } else {
+          q"""def unapply[..$tparamsNoVar](x: ${clsDef.name}[..$tparamNames]): Some[${valDef.tpt}] =
+              Some(x.asInstanceOf[${valDef.tpt}])"""
+        }
+      )
+    }
   }
 
   // We should expose the constructor argument as an extension method only if

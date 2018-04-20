@@ -322,6 +322,36 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     val x = List(Option(1))
     val y = x.coerce[List[Option[Foo]]]
   }
+
+  "unapply = true" should "generate an unapply method" in {
+    @newtype   (unapply = true) case class X0(private val x: String)
+    @newtype   (unapply = true) case class X1[A](private val x: A)
+    @newsubtype(unapply = true) case class Y0(private val x: String)
+    @newsubtype(unapply = true) case class Y1[A](private val x: A)
+
+    // Note that we're using (x0: String) to assert the type of x0 at compile time.
+    // Also checking that unapply doesn't compile for ill-typed expressions.
+
+    val x0 = X0("x") match { case X0(x) => x }
+    (x0: String) shouldBe "x"
+    assertTypeError(""" "x" match { case X0(x) => x }""")
+    assertTypeError("""  1  match { case X0(x) => x }""")
+
+    val x1 = X1("x") match { case X1(x) => x }
+    (x1: String) shouldBe "x"
+    assertTypeError(""" "x" match { case X1(x) => x }""")
+    assertTypeError("""  1  match { case X1(x) => x }""")
+
+    val y0 = Y0("y") match { case Y0(x) => x }
+    (y0: String) shouldBe "y"
+    assertTypeError(""" "x" match { case Y0(x) => x }""")
+    assertTypeError("""  1  match { case Y0(x) => x }""")
+
+    val y1 = Y1("y") match { case Y1(x) => x }
+    (y1: String) shouldBe "y"
+    assertTypeError(""" "x" match { case Y1(x) => x }""")
+    assertTypeError("""  1  match { case Y1(x) => x }""")
+  }
 }
 
 object NewTypeMacrosTest {
