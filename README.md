@@ -173,27 +173,30 @@ object Nel {
 }
 ```
 
-### Generic Instances
+### Automatically Deriving Instances
 
-In some cases, you want to generically provide instances for a certain type class for
-all new types based. You can take advantage of the `Coercible`
+In some cases, you want may want to automatically derive type class instances
+for all newtypes. You can take advantage of the `Coercible`
 type class to achieve that.
 
-Here is an example to provide `Eq` instances for all new type using `Eq` instances of base type. 
+Here is an example of automatically deriving `Eq` instances for all newtypes.
 
 ```scala
-scala> implicit def coercibleEq[A, B](implicit ev: Coercible[Eq[A], Eq[B]], A: Eq[A]): Eq[B] =
-    ev([Eq[B]])
-    
-scala> @newtype case class Foo(x: Int)
+scala> :paste
 
-scala> import cats.implicits._
+import cats._, cats.implicits._
+
+/** If we have an Eq instance for Repr type R, derive an Eq instance for  NewType N. */
+implicit def coercibleEq[R, N](implicit ev: Coercible[Eq[R], Eq[N]], R: Eq[R]): Eq[N] =
+  ev([Eq[R]])
+
+@newtype case class Foo(x: Int)
+
+// Exiting paste mode, now interpreting.
 
 scala> Foo(1) === Foo(2)
 res0: Boolean = false
 ```
-
-
 
 ### Legacy encoding
 
