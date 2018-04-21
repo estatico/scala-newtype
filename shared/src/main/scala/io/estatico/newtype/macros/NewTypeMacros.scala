@@ -93,7 +93,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
   def mkBaseTypeDef(clsDef: ClassDef, reprType: Tree, subtype: Boolean) = {
     val refinementName = TypeName(clsDef.name.decodedName.toString + "$newtype")
     (clsDef.tparams, subtype) match {
-      case (_, false)      =>  q"type Base             = { type $refinementName } "
+      case (_, false)      =>  q"type Base             = Any { type $refinementName } "
       case (Nil, true)     =>  q"type Base             = $reprType"
       case (tparams, true) =>  q"type Base[..$tparams] = $reprType"
     }
@@ -118,14 +118,12 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     val reprType = valDef.tpt
     val typesTraitName = TypeName(clsName.toString + '$' + "Types")
     val tparams = clsDef.tparams
-    val classTagName = TermName(clsName + "$classTag")
     val companionExtraDefs =
-      generateClassTag(classTagName, valDef, tparamsNoVar, tparamNames, subtype) ::
-        maybeGenerateApplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
-        maybeGenerateUnapplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
-        maybeGenerateOpsDef(clsDef, valDef, tparamsNoVar, tparamNames) :::
-        generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) :::
-        generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild)
+      maybeGenerateApplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
+      maybeGenerateUnapplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
+      maybeGenerateOpsDef(clsDef, valDef, tparamsNoVar, tparamNames) :::
+      generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) :::
+      generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild)
 
     val newtypeObjParents = objParents :+ tq"$typesTraitName"
     val newtypeObjDef = q"""
@@ -152,7 +150,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
         trait $typesTraitName {
           type Repr = $reprType
           $baseTypeDef
-          trait Tag
+          trait Tag extends Any
           ${mkTypeTypeDef(clsDef, tparamNames, subtype)}
         }
         $newtypeObjDef
@@ -163,7 +161,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
         trait $typesTraitName {
           type Repr[..$tparams] = $reprType
           $baseTypeDef
-          trait Tag[..$tparams]
+          trait Tag[..$tparams] extends Any
           $typeTypeDef
         }
         $newtypeObjDef
@@ -350,30 +348,6 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     val unsupported = parents.filterNot(t => ignoredExtends.exists(t.equalsStructure))
     if (unsupported.nonEmpty) {
       fail(s"newtypes do not support inheritance; illegal supertypes: ${unsupported.mkString(", ")}")
-    }
-  }
-
-  // The erasure of opaque newtypes is always Object.
-  def generateClassTag(
-    name: TermName, valDef: ValDef, tparamsNoVar: List[TypeDef], tparamNames: List[TypeName],
-    subtype: Boolean
-  ): Tree = {
-    def mkClassTag(t: Tree) = q"implicitly[$ClassTagCls[$t]]"
-    def objClassTag = mkClassTag(tq"$ObjectCls")
-    (tparamsNoVar, subtype) match {
-      case (Nil, false) =>
-        q"implicit def $name: $ClassTagCls[Type] = $objClassTag.asInstanceOf[$ClassTagCls[Type]]"
-      case (ts, false) =>
-        q"""implicit def $name[..$ts]: $ClassTagCls[Type[..$tparamNames]] =
-              $objClassTag.asInstanceOf[$ClassTagCls[Type[..$tparamNames]]]"""
-      case (Nil, true) =>
-        q"""implicit def $name(implicit ct: $ClassTagCls[${valDef.tpt}]): $ClassTagCls[Type] =
-              ct.asInstanceOf[$ClassTagCls[Type]]"""
-      case (ts, true) =>
-        q"""implicit def $name[..$ts](
-              implicit ct: $ClassTagCls[${valDef.tpt}]
-            ): $ClassTagCls[Type[..$tparamNames]] =
-              ct.asInstanceOf[$ClassTagCls[Type[..$tparamNames]]]"""
     }
   }
 }
