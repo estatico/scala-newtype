@@ -45,8 +45,8 @@ package object types {
   type WidgetId = WidgetId.Type
   object WidgetId {
     type Repr = Int
-    type Base = { type WidgetId$newtype }
-    trait Tag
+    type Base = Any { type WidgetId$newtype }
+    trait Tag extends Any
     type Type <: Base with Tag
 
     def apply(x: Int): WidgetId = x.asInstanceOf[WidgetId]
@@ -70,6 +70,69 @@ the underlying value.
 
 Also, since the `@newtype` annotation gives your type a distinct type at compile-time,
 primitives will naturally box as they do when they are applied in any generic context.
+See the following section on `@newsubtype` for unboxed primitive newtypes.
+
+#### @newsubtype macro
+
+As of newtype 0.4 you now have access to the `@newsubtype` macro. Its usage is identical
+to `@newtype`. The difference is that it functions as a _subtype_ of the underlying
+type as opposed to having a completely different type at compile time. This may or may
+not be desirable, and it's recommended to use `@newtype` if you're not entirely sure you
+actually need `@newsubtype`.
+
+The difference in the generated code is that `@newsubtype` defines its `Base` type defined as -
+
+```scala
+type Base = Repr
+```
+
+The main benefit of `@newsubtype` is that primitives are unboxed. For example, the
+following `@newtype` definition will box the `Int`, making it a `java.lang.Integer`
+at runtime -
+
+```scala
+@newtype case class Foo(x: Int)
+```
+
+However, the following `@newsubtype` definition will be a primitive `int` at runtime -
+
+```scala
+@newsubtype case class Bar(x: Int)
+```
+
+Note however that calling `getClass` on a newsubtype will fool you -
+
+```scala
+scala> Bar(1).getClass
+res2: Class[_ <: Bar] = class java.lang.Integer
+```
+
+Reason is that scalac boxes unnecessarily when calling `getClass`, see https://github.com/scala/bug/issues/10770
+
+We can confirm that we do in fact have a primitive `int` at runtime back by inspecting the byte code -
+
+```scala
+scala> class Test { def test = Bar(1) }
+scala> :javap Test
+```
+```java
+...
+  public int test();
+...
+```
+
+Another "feature" of `@newsubtype` is that its values can be passed to functions
+which accept its `Repr` type without needing to convert them first -
+
+```scala
+scala> def half(b: Int): Int = b / 2
+scala> half(Bar(12))
+res6: Int = 6
+```
+
+Note that this feature can be undesirable since the newsubtype will be automatically
+unwrapped, even when you might not mean to. Again, unless you have a good reason to use
+`@newsubtype`, it's recommend to use `@newtype` by default.
 
 #### Smart Constructors and Accessor Methods
 
