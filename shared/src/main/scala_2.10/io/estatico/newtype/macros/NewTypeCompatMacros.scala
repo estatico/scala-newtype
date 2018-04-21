@@ -18,7 +18,7 @@ trait NewTypeCompatMacros {
     * doesn't work in Scala 2.10 -
     * {{{
     *   error: ambiguous reference to overloaded definition,
-    *   both method == in class Object of type (x$1: AnyRef)Boolean
+    *   both method == in class Object of type (x: AnyRef)Boolean
     *   and  method == in class Int of type (x: Double)Boolean
     *   match argument types (Int with Tag) and expected result type Boolean
     * }}}
