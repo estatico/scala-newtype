@@ -174,11 +174,11 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
   ): List[Tree] = {
     if (!clsDef.mods.hasFlag(Flag.CASE)) Nil else List(
       if (tparamsNoVar.isEmpty) {
-        q"def apply(${valDef.name}: ${valDef.tpt}): Type = ${valDef.name}.asInstanceOf[Type]"
+        q"def apply(${valDef.name}: ${valDef.tpt}): ${clsDef.name} = ${valDef.name}.asInstanceOf[${clsDef.name}]"
       } else {
         q"""
-          def apply[..$tparamsNoVar](${valDef.name}: ${valDef.tpt}): Type[..$tparamNames] =
-            ${valDef.name}.asInstanceOf[Type[..$tparamNames]]
+          def apply[..$tparamsNoVar](${valDef.name}: ${valDef.tpt}): ${clsDef.name}[..$tparamNames] =
+            ${valDef.name}.asInstanceOf[${clsDef.name}[..$tparamNames]]
         """
       }
     )
@@ -254,17 +254,19 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     tparamsNoVar: List[TypeDef], tparamNames: List[TypeName], tparamsWild: List[TypeDef]
   ): List[Tree] = {
     if (tparamsNoVar.isEmpty) {
-      List(q"def deriving[T[_]](implicit ev: T[Repr]): T[Type] = ev.asInstanceOf[T[Type]]")
+      List(q"def deriving[TC[_]](implicit ev: TC[Repr]): TC[Type] = ev.asInstanceOf[TC[Type]]")
     } else {
+      // Creating a fresh type name so it doesn't collide with the tparams passed in.
+      val TC = TypeName(c.freshName("TC"))
       List(
         q"""
-          def deriving[T[_], ..$tparamsNoVar](
-            implicit ev: T[Repr[..$tparamNames]]
-          ): T[Type[..$tparamNames]] = ev.asInstanceOf[T[Type[..$tparamNames]]]
+          def deriving[$TC[_], ..$tparamsNoVar](
+            implicit ev: $TC[Repr[..$tparamNames]]
+          ): $TC[Type[..$tparamNames]] = ev.asInstanceOf[$TC[Type[..$tparamNames]]]
         """,
         q"""
-          def derivingK[T[_[..$tparamsWild]]](implicit ev: T[Repr]): T[Type] =
-            ev.asInstanceOf[T[Type]]
+          def derivingK[$TC[_[..$tparamsWild]]](implicit ev: $TC[Repr]): $TC[Type] =
+            ev.asInstanceOf[$TC[Type]]
         """
       )
 

@@ -12,6 +12,11 @@ object Coercible {
   def instance[A, B]: Coercible[A, B] = _instance.asInstanceOf[Coercible[A, B]]
 
   private val _instance = new Coercible[Any, Any] {}
+
+  // Support nested type constructors
+  implicit def unsafeWrapMM[M1[_], M2[_], A, B](
+    implicit ev: Coercible[M2[A], M2[B]]
+  ): Coercible[M1[M2[A]], M1[M2[B]]] = Coercible.instance
 }
 
 final class CoercibleIdOps[A](val repr: A) extends AnyVal {

@@ -5,8 +5,9 @@ import cats.implicits._
 import io.estatico.newtype.ops._
 import io.estatico.newtype.macros.{newsubtype, newtype}
 import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
-class NewTypeCatsTest extends FlatSpec with Matchers {
+class NewTypeCatsTest extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
 
   import NewTypeCatsTest._
 
@@ -120,6 +121,13 @@ class NewTypeCatsTest extends FlatSpec with Matchers {
 
   "Monoid[SubNel[A]]" should "work" in {
     SubNel.of(1, 2, 3).combine(SubNel.of(4, 5, 6)) shouldBe SubNel.of(1, 2, 3, 4, 5, 6)
+  }
+
+  "Coercible" should "support automatic type class derivation" in {
+    implicit def coercibleShow[R, N](implicit ev: Coercible[Show[R], Show[N]], R: Show[R]): Show[N] = ev(R)
+    @newtype case class Foo(private val x: Int)
+    forAll { (n: Int) => Foo(n).show shouldBe n.show }
+    Show[Foo] shouldBe Show[Int]
   }
 }
 

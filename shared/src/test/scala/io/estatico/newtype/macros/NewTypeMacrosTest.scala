@@ -315,6 +315,13 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     @newsubtype(optimizeOps = false) case class Bar[A](value: A)
     Bar("foo").value shouldBe "foo"
   }
+
+  behavior of "Coercible"
+
+  it should "work for nested type constructors" in {
+    val x = List(Option(1))
+    val y = x.coerce[List[Option[Foo]]]
+  }
 }
 
 object NewTypeMacrosTest {
