@@ -4,6 +4,7 @@ import scala.annotation.StaticAnnotation
 
 class newsubtype(
   optimizeOps: Boolean = true,
+  unapply: Boolean = false,
   debug: Boolean = false,
   debugRaw: Boolean = false
 ) extends StaticAnnotation {
