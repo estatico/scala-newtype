@@ -21,14 +21,6 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     res shouldBe Foo(1)
   }
 
-  // The newtype should be implemented in such a way as to prevent type pattern matching.
-  // Unfortunately, assertDoesNotCompile and assertTypeError fail at compile time with this,
-  // so we're not able to make a test case for it yet.
-  // res match {
-  //   case _: Foo => ???
-  //   case _ => ???
-  // }
-
   it should "generate an accessor extension method" in {
     Foo(1).value shouldBe 1
   }
@@ -44,9 +36,12 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     val res: Bar = Bar(2).twice
     res shouldBe 4
   }
+
   it should "work in arrays" in {
     val foo = Foo(313)
-    Array(foo).head shouldBe foo
+    // See https://github.com/estatico/scala-newtype/issues/25
+    // Array(foo).head shouldBe foo
+    Array[Int](313).asInstanceOf[Array[Foo]].head shouldBe foo
   }
 
   behavior of "@newtype class"
@@ -106,7 +101,9 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
   it should "work in arrays" in {
     val repr = Set(Option("newtypes"))
     val ot = OptionT(repr)
-    Array(ot).head shouldBe ot
+    // See https://github.com/estatico/scala-newtype/issues/25
+    // Array(ot).head shouldBe ot
+    Array(repr).asInstanceOf[Array[OptionT[Set, String]]].head shouldBe ot
   }
 
   behavior of "@newtype with type bounds"
@@ -255,7 +252,7 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     val x1 = x0.filter(_.contains("a"))
     x1.isEmpty shouldBe true
     x1 shouldBe Maybe.empty
-    x1 shouldBe null
+    x1 shouldBe (null: Any)
 
     val y0 = Maybe("apple")
     val y1 = y0.filter(_.contains("a"))
@@ -266,13 +263,13 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     val z1 = z0.filter(_.contains("z"))
     z1.isEmpty shouldBe true
     z1 shouldBe Maybe.empty
-    z1 shouldBe null
+    z1 shouldBe (null: Any)
 
     val n0 = Maybe(0)
     val n1 = n0.filter(_ > 0)
     n1.isEmpty shouldBe true
     n1 shouldBe Maybe.empty
-    n1 shouldBe null
+    n1 shouldBe (null: Any)
   }
 
   behavior of "nested @newtypes"
@@ -352,6 +349,18 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     assertTypeError(""" "x" match { case Y1(x) => x }""")
     assertTypeError("""  1  match { case Y1(x) => x }""")
   }
+
+  // Unfortunately, we don't have a way to assert on compiler warnings, which is
+  // what happens with the code below. If we run with -Xfatal-warnings, the test
+  // won't compile at all, so leaving here to do manual checking until scalatest
+  // can provide support for this.
+  // See https://github.com/scalatest/scalatest/issues/1352
+  //"type-based pattern matching" should "emit compiler warnings" in {
+  //  assertDoesNotCompile("Foo(1) match { case x: Foo => x }")
+  //  assertDoesNotCompile("1 match { case x: Foo => x }")
+  //  assertDoesNotCompile(""" "foo" match { case x: Foo => x }""")
+  //  assertDoesNotCompile("(1: Any) match { case x: Foo => x }")
+  //}
 }
 
 object NewTypeMacrosTest {
