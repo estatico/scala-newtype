@@ -93,7 +93,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
   def mkBaseTypeDef(clsDef: ClassDef, reprType: Tree, subtype: Boolean) = {
     val refinementName = TypeName(clsDef.name.decodedName.toString + "$newtype")
     (clsDef.tparams, subtype) match {
-      case (_, false)      =>  q"type Base             = Any { type $refinementName } "
+      case (_, false)      =>  q"type Base             = Any"
       case (Nil, true)     =>  q"type Base             = $reprType"
       case (tparams, true) =>  q"type Base[..$tparams] = $reprType"
     }
