@@ -96,6 +96,7 @@ lazy val defaultSettings = Seq(
 
 lazy val defaultScalacOptions = scalacOptions ++= Seq(
   "-Xfatal-warnings",
+  "-Yno-predef", // needed to ensure users can use -Yno-predef
   "-unchecked",
   "-feature",
   "-deprecation",

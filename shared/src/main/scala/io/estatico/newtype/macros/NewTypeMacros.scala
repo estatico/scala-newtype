@@ -26,8 +26,8 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
       case _ =>
         fail(s"Unsupported @$macroName definition")
     }
-    if (debug) println(s"Expanded @$macroName $name:\n" ++ show(result))
-    if (debugRaw) println(s"Expanded @$macroName $name (raw):\n" + showRaw(result))
+    if (debug) scala.Predef.println(s"Expanded @$macroName $name:\n" + show(result))
+    if (debugRaw) scala.Predef.println(s"Expanded @$macroName $name (raw):\n" + showRaw(result))
     result
   }
 
@@ -91,9 +91,9 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
   }
 
   def mkBaseTypeDef(clsDef: ClassDef, reprType: Tree, subtype: Boolean) = {
-    val refinementName = TypeName(clsDef.name.decodedName.toString + "$newtype")
+    val refinementName = TypeName(s"__${clsDef.name.decodedName.toString}__newtype")
     (clsDef.tparams, subtype) match {
-      case (_, false)      =>  q"type Base             = Any { type $refinementName } "
+      case (_, false)      =>  q"type Base             = _root_.scala.Any { type $refinementName } "
       case (Nil, true)     =>  q"type Base             = $reprType"
       case (tparams, true) =>  q"type Base[..$tparams] = $reprType"
     }
@@ -112,11 +112,11 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     tparamsNoVar: List[TypeDef], tparamNames: List[TypeName], tparamsWild: List[TypeDef],
     subtype: Boolean
   ): Tree = {
-    val q"object $objName extends { ..$objEarlyDefs } with ..$objParents { $objSelf => ..$objDefs }" = modDef
+    val ModuleDef(objMods, objName, Template(objParents, objSelf, objDefs)) = modDef
     val typeName = clsDef.name
     val clsName = clsDef.name.decodedName
     val reprType = valDef.tpt
-    val typesTraitName = TypeName(clsName.toString + '$' + "Types")
+    val typesTraitName = TypeName(s"${clsName.decodedName}__Types")
     val tparams = clsDef.tparams
     val companionExtraDefs =
       maybeGenerateApplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
@@ -126,12 +126,9 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
       generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild)
 
     val newtypeObjParents = objParents :+ tq"$typesTraitName"
-    val newtypeObjDef = q"""
-      object $objName extends { ..$objEarlyDefs } with ..$newtypeObjParents { $objSelf =>
-        ..$objDefs
-        ..$companionExtraDefs
-      }
-    """
+    val newtypeObjDef = ModuleDef(
+      objMods, objName, Template(newtypeObjParents, objSelf, objDefs ++ companionExtraDefs)
+    )
 
     // Note that we use an abstract type alias
     // `type Type <: Base with Tag` and not `type Type = ...` to prevent
@@ -150,7 +147,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
         trait $typesTraitName {
           type Repr = $reprType
           $baseTypeDef
-          trait Tag extends Any
+          trait Tag extends _root_.scala.Any
           ${mkTypeTypeDef(clsDef, tparamNames, subtype)}
         }
         $newtypeObjDef
@@ -161,7 +158,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
         trait $typesTraitName {
           type Repr[..$tparams] = $reprType
           $baseTypeDef
-          trait Tag[..$tparams] extends Any
+          trait Tag[..$tparams] extends _root_.scala.Any
           $typeTypeDef
         }
         $newtypeObjDef
@@ -218,10 +215,10 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     if (!shouldGenerateValMethod(clsDef, valDef)) {
       None
     } else if (!isDefinedInObject && optimizeOps) {
-      c.abort(valDef.pos, s"""
-        |Fields can only be defined for newtypes defined in an object
-        |Consider defining as: private val ${valDef.name.decodedName}
-      """.trim.stripMargin)
+      c.abort(valDef.pos, List(
+        "Fields can only be defined for newtypes defined in an object",
+        s"Consider defining as: private val ${valDef.name.decodedName}"
+      ).mkString(" "))
     } else {
       Some(q"def ${valDef.name}: ${valDef.tpt} = $$this$$.asInstanceOf[${valDef.tpt}]")
     }
@@ -294,27 +291,27 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     tparamsNoVar: List[TypeDef], tparamNames: List[TypeName], tparamsWild: List[TypeDef]
   ): List[Tree] = {
     if (tparamsNoVar.isEmpty) List(
-      q"@inline implicit def unsafeWrap: $CoercibleCls[Repr, Type] = $CoercibleObj.instance",
-      q"@inline implicit def unsafeUnwrap: $CoercibleCls[Type, Repr] = $CoercibleObj.instance",
-      q"@inline implicit def unsafeWrapM[M[_]]: $CoercibleCls[M[Repr], M[Type]] = $CoercibleObj.instance",
-      q"@inline implicit def unsafeUnwrapM[M[_]]: $CoercibleCls[M[Type], M[Repr]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def unsafeWrap: $CoercibleCls[Repr, Type] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def unsafeUnwrap: $CoercibleCls[Type, Repr] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def unsafeWrapM[M[_]]: $CoercibleCls[M[Repr], M[Type]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def unsafeUnwrapM[M[_]]: $CoercibleCls[M[Type], M[Repr]] = $CoercibleObj.instance",
       // Avoid ClassCastException with Array types by prohibiting Array coercing.
-      q"@inline implicit def cannotWrapArrayAmbiguous1: $CoercibleCls[Array[Repr], Array[Type]] = $CoercibleObj.instance",
-      q"@inline implicit def cannotWrapArrayAmbiguous2: $CoercibleCls[Array[Repr], Array[Type]] = $CoercibleObj.instance",
-      q"@inline implicit def cannotUnwrapArrayAmbiguous1: $CoercibleCls[Array[Type], Array[Repr]] = $CoercibleObj.instance",
-      q"@inline implicit def cannotUnwrapArrayAmbiguous2: $CoercibleCls[Array[Type], Array[Repr]] = $CoercibleObj.instance"
+      q"@_root_.scala.inline implicit def cannotWrapArrayAmbiguous1:   $CoercibleCls[_root_.scala.Array[Repr], _root_.scala.Array[Type]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def cannotWrapArrayAmbiguous2:   $CoercibleCls[_root_.scala.Array[Repr], _root_.scala.Array[Type]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def cannotUnwrapArrayAmbiguous1: $CoercibleCls[_root_.scala.Array[Type], _root_.scala.Array[Repr]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def cannotUnwrapArrayAmbiguous2: $CoercibleCls[_root_.scala.Array[Type], _root_.scala.Array[Repr]] = $CoercibleObj.instance"
     ) else List(
-      q"@inline implicit def unsafeWrap[..$tparamsNoVar]: $CoercibleCls[Repr[..$tparamNames], Type[..$tparamNames]] = $CoercibleObj.instance",
-      q"@inline implicit def unsafeUnwrap[..$tparamsNoVar]: $CoercibleCls[Type[..$tparamNames], Repr[..$tparamNames]] = $CoercibleObj.instance",
-      q"@inline implicit def unsafeWrapM[M[_], ..$tparamsNoVar]: $CoercibleCls[M[Repr[..$tparamNames]], M[Type[..$tparamNames]]] = $CoercibleObj.instance",
-      q"@inline implicit def unsafeUnwrapM[M[_], ..$tparamsNoVar]: $CoercibleCls[M[Type[..$tparamNames]], M[Repr[..$tparamNames]]] = $CoercibleObj.instance",
-      q"@inline implicit def unsafeWrapK[T[_[..$tparamsNoVar]]]: $CoercibleCls[T[Repr], T[Type]] = $CoercibleObj.instance",
-      q"@inline implicit def unsafeUnwrapK[T[_[..$tparamsNoVar]]]: $CoercibleCls[T[Type], T[Repr]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def unsafeWrap[..$tparamsNoVar]: $CoercibleCls[Repr[..$tparamNames], Type[..$tparamNames]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def unsafeUnwrap[..$tparamsNoVar]: $CoercibleCls[Type[..$tparamNames], Repr[..$tparamNames]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def unsafeWrapM[M[_], ..$tparamsNoVar]: $CoercibleCls[M[Repr[..$tparamNames]], M[Type[..$tparamNames]]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def unsafeUnwrapM[M[_], ..$tparamsNoVar]: $CoercibleCls[M[Type[..$tparamNames]], M[Repr[..$tparamNames]]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def unsafeWrapK[T[_[..$tparamsNoVar]]]: $CoercibleCls[T[Repr], T[Type]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def unsafeUnwrapK[T[_[..$tparamsNoVar]]]: $CoercibleCls[T[Type], T[Repr]] = $CoercibleObj.instance",
       // Avoid ClassCastException with Array types by prohibiting Array coercing.
-      q"@inline implicit def cannotWrapArrayAmbiguous1[..$tparamsNoVar]: $CoercibleCls[Array[Repr[..$tparamNames]], Array[Type[..$tparamNames]]] = $CoercibleObj.instance",
-      q"@inline implicit def cannotWrapArrayAmbiguous2[..$tparamsNoVar]: $CoercibleCls[Array[Repr[..$tparamNames]], Array[Type[..$tparamNames]]] = $CoercibleObj.instance",
-      q"@inline implicit def cannotUnwrapArrayAmbiguous1[..$tparamsNoVar]: $CoercibleCls[Array[Type[..$tparamNames]], Array[Repr[..$tparamNames]]] = $CoercibleObj.instance",
-      q"@inline implicit def cannotUnwrapArrayAmbiguous2[..$tparamsNoVar]: $CoercibleCls[Array[Type[..$tparamNames]], Array[Repr[..$tparamNames]]] = $CoercibleObj.instance"
+      q"@_root_.scala.inline implicit def cannotWrapArrayAmbiguous1[..$tparamsNoVar]:   $CoercibleCls[_root_.scala.Array[Repr[..$tparamNames]], _root_.scala.Array[Type[..$tparamNames]]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def cannotWrapArrayAmbiguous2[..$tparamsNoVar]:   $CoercibleCls[_root_.scala.Array[Repr[..$tparamNames]], _root_.scala.Array[Type[..$tparamNames]]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def cannotUnwrapArrayAmbiguous1[..$tparamsNoVar]: $CoercibleCls[_root_.scala.Array[Type[..$tparamNames]], _root_.scala.Array[Repr[..$tparamNames]]] = $CoercibleObj.instance",
+      q"@_root_.scala.inline implicit def cannotUnwrapArrayAmbiguous2[..$tparamsNoVar]: $CoercibleCls[_root_.scala.Array[Type[..$tparamNames]], _root_.scala.Array[Repr[..$tparamNames]]] = $CoercibleObj.instance"
     )
   }
 

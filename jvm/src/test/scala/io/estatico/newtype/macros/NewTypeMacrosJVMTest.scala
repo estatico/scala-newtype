@@ -8,14 +8,14 @@ class NewTypeMacrosJVMTest extends FlatSpec with Matchers {
 
   it should "not box primitives" in {
     // Introspect the runtime type returned by the `apply` method
-    def ctorReturnType(o: Any) = o.getClass.getMethods.find(_.getName == "apply").get.getReturnType
+    def ctorReturnType(o: Any) = List(o.getClass.getMethods: _*).find(_.getName == "apply").get.getReturnType
 
     // newtypes will box primitive values.
     @newtype case class BoxedInt(private val x: Int)
-    ctorReturnType(BoxedInt) shouldBe classOf[Object]
+    ctorReturnType(BoxedInt) shouldBe scala.Predef.classOf[Object]
 
     // newsubtypes will NOT box primitive values.
     @newsubtype case class UnboxedInt(private val x: Int)
-    ctorReturnType(UnboxedInt) shouldBe classOf[Int]
+    ctorReturnType(UnboxedInt) shouldBe scala.Predef.classOf[Int]
   }
 }
