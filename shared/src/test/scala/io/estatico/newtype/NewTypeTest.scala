@@ -28,7 +28,7 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
     object Box extends NewType.Of[String] with NewTypeDeriving {
       implicit val arb: Arbitrary[Type] = deriving[Arbitrary]
     }
-    implicitly[Arbitrary[Box]].arbitrary.sample shouldBe defined
+    scala.Predef.implicitly[Arbitrary[Box]].arbitrary.sample shouldBe defined
   }
 
   it should "support user ops" in {
@@ -59,7 +59,7 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
     object Foo extends NewType.Default[Int]
 
     val foo = Foo(42)
-    Array(foo).head shouldEqual foo
+    Array(foo).apply(0) shouldEqual foo
   }
 
   "NewTypeApply" should "automatically create an apply method" in {
@@ -123,7 +123,7 @@ class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
     object Foo extends NewSubType.Default[Int]
 
     val foo = Foo(-273)
-    Array(foo).head shouldEqual foo
+    Array(foo).apply(0) shouldEqual foo
   }
 
   "Coercible" should "work across newtypes" in {

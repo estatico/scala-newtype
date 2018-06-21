@@ -40,8 +40,8 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
   it should "work in arrays" in {
     val foo = Foo(313)
     // See https://github.com/estatico/scala-newtype/issues/25
-    // Array(foo).head shouldBe foo
-    Array[Int](313).asInstanceOf[Array[Foo]].head shouldBe foo
+    // Array(foo).apply(0) shouldBe foo
+    Array[Int](313).asInstanceOf[Array[Foo]].apply(0) shouldBe foo
   }
 
   behavior of "@newtype class"
@@ -99,11 +99,12 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
   }
 
   it should "work in arrays" in {
+    import scala.collection.immutable.Set
     val repr = Set(Option("newtypes"))
     val ot = OptionT(repr)
     // See https://github.com/estatico/scala-newtype/issues/25
-    // Array(ot).head shouldBe ot
-    Array(repr).asInstanceOf[Array[OptionT[Set, String]]].head shouldBe ot
+    // Array(ot).apply(0) shouldBe ot
+    Array(repr).asInstanceOf[Array[OptionT[Set, String]]].apply(0) shouldBe ot
   }
 
   behavior of "@newtype with type bounds"
@@ -126,7 +127,7 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     object Text {
       implicit val arb: Arbitrary[Text] = deriving
     }
-    val x = implicitly[Arbitrary[Text]].arbitrary.sample.get
+    val x = scala.Predef.implicitly[Arbitrary[Text]].arbitrary.sample.get
     assertCompiles("x: Text")
     val y = x.coerce[String]
     assertCompiles("y: String")
@@ -135,9 +136,9 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
   it should "support deriving type class instances for simple newtypes via coerce" in {
     @newtype case class Text(private val s: String)
     object Text {
-      implicit val arb: Arbitrary[Text] = implicitly[Arbitrary[String]].coerce
+      implicit val arb: Arbitrary[Text] = scala.Predef.implicitly[Arbitrary[String]].coerce
     }
-    val x = implicitly[Arbitrary[Text]].arbitrary.sample.get
+    val x = scala.Predef.implicitly[Arbitrary[Text]].arbitrary.sample.get
     assertCompiles("x: Text")
     val y = x.coerce[String]
     assertCompiles("y: String")
@@ -150,7 +151,7 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
       implicit val functor: Functor[Nel] = derivingK
     }
 
-    val x = implicitly[Functor[Nel]].map(Nel(1, List(2, 3)))(_ * 2)
+    val x = scala.Predef.implicitly[Functor[Nel]].map(Nel(1, List(2, 3)))(_ * 2)
     assertCompiles("x: Nel[Int]")
     x shouldBe List(2, 4, 6)
   }
@@ -159,10 +160,10 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     @newtype class Nel[A](private val list: List[A])
     object Nel {
       def apply[A](head: A, tail: List[A]): Nel[A] = (head +: tail).coerce[Nel[A]]
-      implicit val functor: Functor[Nel] = implicitly[Functor[List]].coerce
+      implicit val functor: Functor[Nel] = scala.Predef.implicitly[Functor[List]].coerce
     }
 
-    val x = implicitly[Functor[Nel]].map(Nel(1, List(2, 3)))(_ * 2)
+    val x = scala.Predef.implicitly[Functor[Nel]].map(Nel(1, List(2, 3)))(_ * 2)
     assertCompiles("x: Nel[Int]")
     x shouldBe List(2, 4, 6)
   }
@@ -172,7 +173,7 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     object Text {
       implicit def typeclass[T[_]](implicit ev: T[String]): T[Text] = deriving
     }
-    val x = implicitly[Arbitrary[Text]].arbitrary.sample.get
+    val x = scala.Predef.implicitly[Arbitrary[Text]].arbitrary.sample.get
     assertCompiles("x: Text")
     val y = x.coerce[String]
     assertCompiles("y: String")
@@ -183,7 +184,7 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     object Text {
       implicit def typeclass[T[_]](implicit ev: T[String]): T[Text] = ev.coerce
     }
-    val x = implicitly[Arbitrary[Text]].arbitrary.sample.get
+    val x = scala.Predef.implicitly[Arbitrary[Text]].arbitrary.sample.get
     assertCompiles("x: Text")
     val y = x.coerce[String]
     assertCompiles("y: String")
@@ -197,7 +198,10 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
         implicit a: Arbitrary[F[Either[L, R]]]
       ): Arbitrary[EitherT[F, L, R]] = deriving
     }
-    val x = implicitly[Arbitrary[EitherT[List, String, Int]]].arbitrary.sample.get
+    val x = {
+      import scala.Predef._
+      scala.Predef.implicitly[Arbitrary[EitherT[List, String, Int]]].arbitrary.sample.get
+    }
     assertCompiles("x: EitherT[List, String, Int]")
     val y = x.coerce[List[Either[String, Int]]]
     assertCompiles("y: List[Either[String, Int]]")
@@ -211,7 +215,10 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
         implicit a: Arbitrary[F[Either[L, R]]]
       ): Arbitrary[EitherT[F, L, R]] = a.coerce
     }
-    val x = implicitly[Arbitrary[EitherT[List, String, Int]]].arbitrary.sample.get
+    val x = {
+      import scala.Predef._
+      scala.Predef.implicitly[Arbitrary[EitherT[List, String, Int]]].arbitrary.sample.get
+    }
     assertCompiles("x: EitherT[List, String, Int]")
     val y = x.coerce[List[Either[String, Int]]]
     assertCompiles("y: List[Either[String, Int]]")
@@ -225,7 +232,10 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
         implicit t: T[F[Either[L, R]]]
       ): T[EitherT[F, L, R]] = deriving
     }
-    val x = implicitly[Arbitrary[EitherT[List, String, Int]]].arbitrary.sample.get
+    val x = {
+      import scala.Predef._
+      scala.Predef.implicitly[Arbitrary[EitherT[List, String, Int]]].arbitrary.sample.get
+    }
     assertCompiles("x: EitherT[List, String, Int]")
     val y = x.coerce[List[Either[String, Int]]]
     assertCompiles("y: List[Either[String, Int]]")
@@ -239,7 +249,10 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
         implicit t: T[F[Either[L, R]]]
       ): T[EitherT[F, L, R]] = t.coerce
     }
-    val x = implicitly[Arbitrary[EitherT[List, String, Int]]].arbitrary.sample.get
+    val x = {
+      import scala.Predef._
+      scala.Predef.implicitly[Arbitrary[EitherT[List, String, Int]]].arbitrary.sample.get
+    }
     assertCompiles("x: EitherT[List, String, Int]")
     val y = x.coerce[List[Either[String, Int]]]
     assertCompiles("y: List[Either[String, Int]]")
