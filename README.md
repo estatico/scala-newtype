@@ -11,7 +11,7 @@ NewTypes for Scala with no runtime overhead.
 If you are using SBT, add the following line to your build file -
 
 ```scala
-libraryDependencies += "io.estatico" %% "newtype" % "0.4.0"
+libraryDependencies += "io.estatico" %% "newtype" % "0.4.2"
 ```
 
 For Maven or other build tools, see the Maven Central badge at the top of this README.
