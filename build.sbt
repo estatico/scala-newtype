@@ -1,4 +1,5 @@
 import ReleaseTransformations._
+import sbtcrossproject.crossProject
 
 organization in ThisBuild := "io.estatico"
 
@@ -6,7 +7,7 @@ lazy val root = project.in(file("."))
   .aggregate(newtypeJS, newtypeJVM, catsTestsJVM, catsTestsJS)
   .settings(noPublishSettings)
 
-lazy val newtype = crossProject.in(file("."))
+lazy val newtype = crossProject(JSPlatform, JVMPlatform).in(file("."))
   .settings(defaultSettings)
   .settings(releasePublishSettings)
   .settings(name := "newtype")
@@ -15,7 +16,7 @@ lazy val newtype = crossProject.in(file("."))
 lazy val newtypeJVM = newtype.jvm
 lazy val newtypeJS = newtype.js
 
-lazy val catsTests = crossProject.in(file("cats-tests"))
+lazy val catsTests = crossProject(JSPlatform, JVMPlatform).in(file("cats-tests"))
   .dependsOn(newtype)
   .settings(defaultSettings)
   .settings(noPublishSettings)
