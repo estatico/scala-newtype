@@ -24,7 +24,7 @@ lazy val catsTests = crossProject(JSPlatform, JVMPlatform).in(file("cats-tests")
     name := "newtype-cats-tests",
     description := "Test suite for newtype + cats interop",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "1.0.1"
+      "org.typelevel" %%% "cats-core" % "1.2.0"
     )
   )
 
@@ -91,8 +91,25 @@ lazy val releasePublishSettings = Seq(
 
 lazy val defaultSettings = Seq(
   defaultScalacOptions,
+  scalacOptions ++= PartialFunction.condOpt(CrossVersion.partialVersion(scalaVersion.value)) {
+    case Some((2, n)) if n >= 13 =>
+      Seq(
+        "-Ymacro-annotations"
+      )
+  }.toList.flatten,
   defaultLibraryDependencies,
-  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+  libraryDependencies ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, v)) if v <= 12 =>
+        Seq(
+          compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
+        )
+      case _ =>
+        // if scala 2.13.0-M4 or later, macro annotations merged into scala-reflect
+        // https://github.com/scala/scala/pull/6606
+        Nil
+    }
+  }
 )
 
 lazy val defaultScalacOptions = scalacOptions ++= Seq(
@@ -110,8 +127,8 @@ lazy val defaultLibraryDependencies = libraryDependencies ++= Seq(
   "org.typelevel" %% "macro-compat" % "1.1.1",
   scalaOrganization.value % "scala-reflect" % scalaVersion.value % Provided,
   scalaOrganization.value % "scala-compiler" % scalaVersion.value % Provided,
-  "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
-  "org.scalatest" %%% "scalatest" % "3.0.0" % "test"
+  "org.scalacheck" %%% "scalacheck" % "1.14.0" % "test",
+  "org.scalatest" %%% "scalatest" % "3.0.6-SNAP1" % "test"
 )
 
 def scalaPartV = Def.setting(CrossVersion.partialVersion(scalaVersion.value))
