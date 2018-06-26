@@ -1,0 +1,4 @@
+<plugin>
+  <name>newtype</name>
+  <classname>io.estatico.newtype.plugin.NewTypePlugin</classname>
+</plugin>

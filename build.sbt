@@ -6,6 +6,24 @@ lazy val root = project.in(file("."))
   .aggregate(newtypeJS, newtypeJVM, catsTestsJVM, catsTestsJS)
   .settings(noPublishSettings)
 
+lazy val plugin = project.in(file("plugin")).settings(
+  name := "newtype-plugin",
+  libraryDependencies ++= Seq(
+    "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided",
+    "org.scalatest" %% "scalatest" % "3.0.4" % "test"
+  ),
+  fork in Test := true,
+  scalacOptions in Test ++= {
+    val jar = (packageBin in Compile).value
+    Seq(
+      "-Yno-predef",
+      "-Yno-imports",
+      s"-Xplugin:${jar.getAbsolutePath}",
+      s"-Jdummy=${jar.lastModified}"
+    )
+  }
+)
+
 lazy val newtype = crossProject.in(file("."))
   .settings(defaultSettings)
   .settings(releasePublishSettings)
