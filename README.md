@@ -14,6 +14,13 @@ If you are using SBT, add the following line to your build file -
 libraryDependencies += "io.estatico" %% "newtype" % "0.4.2"
 ```
 
+Make sure you have [macro-paradise](https://docs.scala-lang.org/overviews/macros/paradise.html) enabled
+ - for Scala 2.13.0-M3 and lower add the following line to your build file
+```scala
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
+```
+- for Scala 2.13.0-M4 and above via compiler flag [`-Ymacro-annotations`](https://github.com/scala/scala/pull/6606)
+
 For Maven or other build tools, see the Maven Central badge at the top of this README.
 
 ## Usage
