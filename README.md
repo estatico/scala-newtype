@@ -165,6 +165,7 @@ Using `class` will not generate a smart constructor (no `apply` method). This al
 you to specify your own. Note that `new` never works for newtypes and will fail to compile.
 
 ```scala
+  import io.estatico.newtype.ops._
   @newtype class Id(val strValue: String)
 
   object Id {
