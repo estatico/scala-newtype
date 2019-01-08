@@ -164,25 +164,27 @@ prevent this by defining the field as private.
 Using `class` will not generate a smart constructor (no `apply` method). This allows
 you to specify your own. Note that `new` never works for newtypes and will fail to compile.
 
-```scala
-  import io.estatico.newtype.ops._
-  @newtype class Id(val strValue: String)
-
-  object Id {
-    def apply(str: String): Either[String, Id] = {
-      if (str.isEmpty)
-        Left("Id cannot be empty")
-      else
-        Right(str.coerce)
-    }
-  }
-```
-
 If you wish to generate an accessor method for your underlying value, you can define it as `val`
 just as if you were dealing with a normal class.
 
 ```scala
 @newtype class N(val a: A)
+```
+
+If you need to define your own smart constructor, use the
+`.coerce` extension method to cast to your newtype.
+
+```scala
+import io.estatico.newtype.ops._
+
+@newtype class Id(val strValue: String)
+
+object Id {
+  def fromString(str: String): Either[String, Id] = {
+    if (str.isEmpty) Left("Id cannot be empty")
+    else Right(str.coerce)
+  }
+}
 ```
 
 #### Extension Methods
