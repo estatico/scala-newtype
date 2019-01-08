@@ -165,10 +165,17 @@ Using `class` will not generate a smart constructor (no `apply` method). This al
 you to specify your own. Note that `new` never works for newtypes and will fail to compile.
 
 ```scala
-@newtype class N(a: A)
-object N {
-  def apply(a: A): N = ???
-}
+  import io.estatico.newtype.ops._
+  @newtype class Id(val strValue: String)
+
+  object Id {
+    def apply(str: String): Either[String, Id] = {
+      if (str.isEmpty)
+        Left("Id cannot be empty")
+      else
+        Right(str.coerce)
+    }
+  }
 ```
 
 If you wish to generate an accessor method for your underlying value, you can define it as `val`
