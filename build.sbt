@@ -1,5 +1,5 @@
 import ReleaseTransformations._
-import sbtcrossproject.crossProject
+import sbtcrossproject.CrossPlugin.autoImport.crossProject
 
 organization in ThisBuild := "io.estatico"
 
@@ -32,8 +32,8 @@ lazy val catsTestsJVM = catsTests.jvm
 lazy val catsTestsJS = catsTests.js
 
 lazy val noPublishSettings = Seq(
-  publish := (),
-  publishLocal := (),
+  publish := {},
+  publishLocal := {},
   publishArtifact := false
 )
 
