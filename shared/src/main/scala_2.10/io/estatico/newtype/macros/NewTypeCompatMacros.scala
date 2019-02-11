@@ -25,5 +25,12 @@ trait NewTypeCompatMacros {
     * @return
     */
   def opsClsParent: Symbol = typeOf[AnyRef].typeSymbol
-}
 
+  /**
+    * Scala 2.10 doesn't support objects having abstract type
+    * members, so we have to use some indirection by defining the
+    * abstract type in a trait then having the companion object extend
+    * the trait. See https://github.com/scala/bug/issues/10750
+    */
+  val emitTrait: Boolean = true
+}

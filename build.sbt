@@ -121,7 +121,17 @@ lazy val defaultScalacOptions = scalacOptions ++= Seq(
   "-language:higherKinds",
   "-language:implicitConversions",
   "-language:experimental.macros"
-)
+) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
+  case Some((2, 10)) =>
+    // no -Xlint on 2.10 because scala 2.10 does not support abstract
+    // type members on an object. See NewTypeCompatMacros.emitTrait
+    Nil
+  case Some((2, 11)) =>
+    Seq("-Xlint")
+  case _ =>
+    // on scala 2.12+ some spurious unused warnings get triggered
+    Seq("-Xlint:-unused,_")
+})
 
 lazy val defaultLibraryDependencies = libraryDependencies ++= Seq(
   "org.typelevel" %% "macro-compat" % "1.1.1",
