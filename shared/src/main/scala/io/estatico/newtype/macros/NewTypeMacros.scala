@@ -188,11 +188,24 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
       // Note that our unapply method should Some since its isEmpty/get is constant.
       List(
         if (tparamsNoVar.isEmpty) {
-          q"""def unapply(x: ${clsDef.name}): Some[${valDef.tpt}] =
-              Some(x.asInstanceOf[${valDef.tpt}])"""
+          q"""class UnapplyOps(val x: ${clsDef.name}) extends AnyVal {
+                @inline def isEmpty: Boolean = false
+                @inline def get: ${valDef.tpt} = x.asInstanceOf[${valDef.tpt}]
+             }
+           """
         } else {
-          q"""def unapply[..$tparamsNoVar](x: ${clsDef.name}[..$tparamNames]): Some[${valDef.tpt}] =
-              Some(x.asInstanceOf[${valDef.tpt}])"""
+          q"""class UnapplyOps[..$tparamsNoVar](val x: ${clsDef.name}[..$tparamNames]) extends AnyVal {
+                @inline def isEmpty: Boolean = false
+                @inline def get: ${valDef.tpt} = x.asInstanceOf[${valDef.tpt}]
+             }
+           """
+        },
+        if (tparamsNoVar.isEmpty) {
+          q"""def unapply(x: ${clsDef.name}): UnapplyOps =
+              new UnapplyOps(x)"""
+        } else {
+          q"""def unapply[..$tparamsNoVar](x: ${clsDef.name}[..$tparamNames]): UnapplyOps =
+              new UnapplyOps(x)"""
         }
       )
     }
