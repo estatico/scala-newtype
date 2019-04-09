@@ -1,5 +1,6 @@
 package io.estatico.newtype.macros
 
+import io.estatico.newtype.Coercible
 import org.scalatest.{FlatSpec, Matchers}
 import io.estatico.newtype.ops._
 import org.scalacheck.Arbitrary

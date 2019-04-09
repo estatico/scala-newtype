@@ -188,11 +188,11 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
       // We are using a generic value class name-based extractor not to allocate Some
       List(
         if (tparamsNoVar.isEmpty) {
-          q"""def unapply(x: ${clsDef.name}): io.estatico.newtype.NewType.NewTypeUnapplyOps[..${valDef.tpt}] =
-                new io.estatico.newtype.NewType.NewTypeUnapplyOps(x)"""
+          q"""def unapply(x: ${clsDef.name}): io.estatico.newtype.NewType.NewTypeUnapplyOps[${valDef.tpt}] =
+                new io.estatico.newtype.NewType.NewTypeUnapplyOps[${valDef.tpt}](x.coerce)"""
         } else {
-          q"""def unapply[..$tparamsNoVar](x: ${clsDef.name}[..$tparamNames]): io.estatico.newtype.NewType.NewTypeUnapplyOps[..${valDef.tpt}] =
-                new io.estatico.newtype.NewType.NewTypeUnapplyOps(x)"""
+          q"""def unapply[..$tparamsNoVar](x: ${clsDef.name}[..$tparamNames]): io.estatico.newtype.NewType.NewTypeUnapplyOps[${valDef.tpt}] =
+                new io.estatico.newtype.NewType.NewTypeUnapplyOps[${valDef.tpt}](x.coerce[${valDef.tpt}])"""
         }
       )
     }
