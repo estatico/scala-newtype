@@ -185,27 +185,14 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     clsDef: ClassDef, valDef: ValDef, tparamsNoVar: List[TypeDef], tparamNames: List[TypeName]
   ): List[Tree] = {
     if (!unapply) Nil else {
-      // Note that our unapply method should Some since its isEmpty/get is constant.
+      // We are using a generic value class name-based extractor not to allocate Some
       List(
         if (tparamsNoVar.isEmpty) {
-          q"""class UnapplyOps(val x: ${clsDef.name}) extends AnyVal {
-                @inline def isEmpty: Boolean = false
-                @inline def get: ${valDef.tpt} = x.asInstanceOf[${valDef.tpt}]
-             }
-           """
+          q"""def unapply(x: ${clsDef.name}): io.estatico.newtype.NewType.NewTypeUnapplyOps[..${valDef.tpt}] =
+                new io.estatico.newtype.NewType.NewTypeUnapplyOps(x)"""
         } else {
-          q"""class UnapplyOps[..$tparamsNoVar](val x: ${clsDef.name}[..$tparamNames]) extends AnyVal {
-                @inline def isEmpty: Boolean = false
-                @inline def get: ${valDef.tpt} = x.asInstanceOf[${valDef.tpt}]
-             }
-           """
-        },
-        if (tparamsNoVar.isEmpty) {
-          q"""def unapply(x: ${clsDef.name}): UnapplyOps =
-              new UnapplyOps(x)"""
-        } else {
-          q"""def unapply[..$tparamsNoVar](x: ${clsDef.name}[..$tparamNames]): UnapplyOps =
-              new UnapplyOps(x)"""
+          q"""def unapply[..$tparamsNoVar](x: ${clsDef.name}[..$tparamNames]): io.estatico.newtype.NewType.NewTypeUnapplyOps[..${valDef.tpt}] =
+                new io.estatico.newtype.NewType.NewTypeUnapplyOps(x)"""
         }
       )
     }
