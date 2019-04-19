@@ -254,7 +254,7 @@ object Nel {
 
 ### Automatically Deriving Instances
 
-In some cases, you want may want to automatically derive type class instances
+In some cases, you may want to automatically derive type class instances
 for all newtypes. You can take advantage of the `Coercible`
 type class to achieve that.
 
