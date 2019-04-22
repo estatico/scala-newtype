@@ -27,7 +27,7 @@ lazy val catsTests = crossProject(JSPlatform, JVMPlatform).in(file("cats-tests")
       if (scalaVersion.value.startsWith("2.10."))
         "org.typelevel" %%% "cats-core" % "1.2.0"
       else
-        "org.typelevel" %%% "cats-core" % "1.6.0"
+        "org.typelevel" %%% "cats-core" % "2.0.0-M1"
     }
   )
 
@@ -131,7 +131,7 @@ lazy val defaultLibraryDependencies = libraryDependencies ++= Seq(
   scalaOrganization.value % "scala-reflect" % scalaVersion.value % Provided,
   scalaOrganization.value % "scala-compiler" % scalaVersion.value % Provided,
   "org.scalacheck" %%% "scalacheck" % "1.14.0" % Test,
-  "org.scalatest" %%% "scalatest" % "3.0.7" % Test
+  "org.scalatest" %%% "scalatest" % "3.0.8-RC2" % Test
 )
 
 def scalaPartV = Def.setting(CrossVersion.partialVersion(scalaVersion.value))
