@@ -125,11 +125,6 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
       generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) :::
       generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild)
 
-    val newtypeObjParents = objParents :+ tq"$typesTraitName"
-    val newtypeObjDef = ModuleDef(
-      objMods, objName, Template(newtypeObjParents, objSelf, objDefs ++ companionExtraDefs)
-    )
-
     // Note that we use an abstract type alias
     // `type Type <: Base with Tag` and not `type Type = ...` to prevent
     // scalac automatically expanding the type alias.
@@ -141,18 +136,12 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     val baseTypeDef = mkBaseTypeDef(clsDef, reprType, subtype)
     val typeTypeDef = mkTypeTypeDef(clsDef, tparamNames, subtype)
 
-    if (tparams.isEmpty) {
-      q"""
-        type $typeName = $objName.Type
-        trait $typesTraitName {
-          type Repr = $reprType
-          $baseTypeDef
-          trait Tag extends _root_.scala.Any
-          ${mkTypeTypeDef(clsDef, tparamNames, subtype)}
-        }
-        $newtypeObjDef
-      """
-    } else {
+    if (emitTrait) {
+      val newtypeObjParents = objParents :+ tq"$typesTraitName"
+      val newtypeObjDef = ModuleDef(
+        objMods, objName, Template(newtypeObjParents, objSelf, objDefs ++ companionExtraDefs)
+      )
+
       q"""
         type $typeName[..$tparams] = ${typeName.toTermName}.Type[..$tparamNames]
         trait $typesTraitName {
@@ -161,6 +150,21 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
           trait Tag[..$tparams] extends _root_.scala.Any
           $typeTypeDef
         }
+        $newtypeObjDef
+      """
+    } else {
+      val newtypeObjParents = objParents
+      val newtypeObjDef = ModuleDef(
+        objMods, objName, Template(newtypeObjParents, objSelf, objDefs ++ companionExtraDefs ++ Seq(
+          q"type Repr[..$tparams] = $reprType",
+          baseTypeDef,
+          q"trait Tag[..$tparams] extends _root_.scala.Any",
+          typeTypeDef
+        ))
+      )
+
+      q"""
+        type $typeName[..$tparams] = $objName.Type[..$tparamNames]
         $newtypeObjDef
       """
     }

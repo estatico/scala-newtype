@@ -9,4 +9,6 @@ trait NewTypeCompatMacros {
   import c.universe._
 
   def opsClsParent: Symbol = typeOf[AnyVal].typeSymbol
+
+  val emitTrait: Boolean = false
 }
