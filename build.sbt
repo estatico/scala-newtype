@@ -1,5 +1,5 @@
 import ReleaseTransformations._
-import sbtcrossproject.crossProject
+import sbtcrossproject.CrossPlugin.autoImport.crossProject
 
 organization in ThisBuild := "io.estatico"
 
@@ -23,17 +23,20 @@ lazy val catsTests = crossProject(JSPlatform, JVMPlatform).in(file("cats-tests")
   .settings(
     name := "newtype-cats-tests",
     description := "Test suite for newtype + cats interop",
-    libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "1.2.0"
-    )
+    libraryDependencies += {
+      if (scalaVersion.value.startsWith("2.10."))
+        "org.typelevel" %%% "cats-core" % "1.2.0"
+      else
+        "org.typelevel" %%% "cats-core" % "2.0.0-M2"
+    }
   )
 
 lazy val catsTestsJVM = catsTests.jvm
 lazy val catsTestsJS = catsTests.js
 
 lazy val noPublishSettings = Seq(
-  publish := (),
-  publishLocal := (),
+  publish := {},
+  publishLocal := {},
   publishArtifact := false
 )
 
@@ -127,8 +130,8 @@ lazy val defaultLibraryDependencies = libraryDependencies ++= Seq(
   "org.typelevel" %% "macro-compat" % "1.1.1",
   scalaOrganization.value % "scala-reflect" % scalaVersion.value % Provided,
   scalaOrganization.value % "scala-compiler" % scalaVersion.value % Provided,
-  "org.scalacheck" %%% "scalacheck" % "1.14.0" % "test",
-  "org.scalatest" %%% "scalatest" % "3.0.6-SNAP1" % "test"
+  "org.scalacheck" %%% "scalacheck" % "1.14.0" % Test,
+  "org.scalatest" %%% "scalatest" % "3.0.8-RC4" % Test
 )
 
 def scalaPartV = Def.setting(CrossVersion.partialVersion(scalaVersion.value))

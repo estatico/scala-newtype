@@ -1,10 +1,10 @@
 package io.estatico.newtype
 
 import org.scalacheck.Arbitrary
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import org.scalatest.{FlatSpec, Matchers}
 
-class NewTypeTest extends FlatSpec with PropertyChecks with Matchers {
+class NewTypeTest extends FlatSpec with ScalaCheckPropertyChecks with Matchers {
 
   import NewTypeTest._
 

@@ -228,7 +228,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     clsDef: ClassDef, valDef: ValDef, tparamsNoVar: List[TypeDef], tparamNames: List[TypeName]
   ): List[Tree] = {
     val extensionMethods =
-      maybeGenerateValMethod(clsDef, valDef) ++ getInstanceMethods(clsDef)
+      maybeGenerateValMethod(clsDef, valDef).toList ++ getInstanceMethods(clsDef)
 
     if (extensionMethods.isEmpty) {
       Nil
