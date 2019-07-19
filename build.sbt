@@ -27,7 +27,7 @@ lazy val catsTests = crossProject(JSPlatform, JVMPlatform).in(file("cats-tests")
       if (scalaVersion.value.startsWith("2.10."))
         "org.typelevel" %%% "cats-core" % "1.2.0"
       else
-        "org.typelevel" %%% "cats-core" % "2.0.0-M2"
+        "org.typelevel" %%% "cats-core" % "2.0.0-M4"
     }
   )
 
@@ -100,6 +100,7 @@ lazy val defaultSettings = Seq(
         "-Ymacro-annotations"
       )
   }.toList.flatten,
+  macrocompatDependency,
   defaultLibraryDependencies,
   libraryDependencies ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
@@ -136,12 +137,23 @@ lazy val defaultScalacOptions = scalacOptions ++= Seq(
     Seq("-Xlint:-unused,_")
 })
 
+// Only include for 2.10; see https://github.com/milessabin/macro-compat/pull/85 for discussion
+lazy val macrocompatDependency = libraryDependencies ++= {
+  CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, v)) if v < 11 =>
+      Seq(
+        "org.typelevel" %% "macro-compat" % "1.1.1"
+      )
+    case _ =>
+      Nil
+  }
+}
+
 lazy val defaultLibraryDependencies = libraryDependencies ++= Seq(
-  "org.typelevel" %% "macro-compat" % "1.1.1",
   scalaOrganization.value % "scala-reflect" % scalaVersion.value % Provided,
   scalaOrganization.value % "scala-compiler" % scalaVersion.value % Provided,
   "org.scalacheck" %%% "scalacheck" % "1.14.0" % Test,
-  "org.scalatest" %%% "scalatest" % "3.0.8-RC4" % Test
+  "org.scalatest" %%% "scalatest" % "3.0.8" % Test
 )
 
 def scalaPartV = Def.setting(CrossVersion.partialVersion(scalaVersion.value))
