@@ -4,12 +4,13 @@ import io.estatico.newtype.Coercible
 import scala.reflect.ClassTag
 import scala.reflect.macros.blackbox
 
-//noinspection TypeAnnotation
-@macrocompat.bundle
-private[macros] class NewTypeMacros(val c: blackbox.Context)
-  extends NewTypeCompatMacros {
+private[macros] class NewTypeMacros(val c: blackbox.Context) {
 
   import c.universe._
+
+  def opsClsParent: Symbol = typeOf[AnyVal].typeSymbol
+
+  val emitTrait: Boolean = false
 
   def newtypeAnnotation(annottees: Tree*): Tree =
     runAnnotation(subtype = false, annottees)

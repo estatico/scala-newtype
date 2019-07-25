@@ -11,7 +11,6 @@ lazy val newtype = crossProject(JSPlatform, JVMPlatform).in(file("."))
   .settings(defaultSettings)
   .settings(releasePublishSettings)
   .settings(name := "newtype")
-  .settings(crossVersionSharedSources)
 
 lazy val newtypeJVM = newtype.jvm
 lazy val newtypeJS = newtype.js
@@ -23,12 +22,7 @@ lazy val catsTests = crossProject(JSPlatform, JVMPlatform).in(file("cats-tests")
   .settings(
     name := "newtype-cats-tests",
     description := "Test suite for newtype + cats interop",
-    libraryDependencies += {
-      if (scalaVersion.value.startsWith("2.10."))
-        "org.typelevel" %%% "cats-core" % "1.2.0"
-      else
-        "org.typelevel" %%% "cats-core" % "2.0.0-M4"
-    }
+    libraryDependencies += "org.typelevel" %%% "cats-core" % "2.0.0-M4"
   )
 
 lazy val catsTestsJVM = catsTests.jvm
@@ -100,7 +94,6 @@ lazy val defaultSettings = Seq(
         "-Ymacro-annotations"
       )
   }.toList.flatten,
-  macrocompatDependency,
   defaultLibraryDependencies,
   libraryDependencies ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
@@ -126,10 +119,6 @@ lazy val defaultScalacOptions = scalacOptions ++= Seq(
   "-language:implicitConversions",
   "-language:experimental.macros"
 ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
-  case Some((2, 10)) =>
-    // no -Xlint on 2.10 because scala 2.10 does not support abstract
-    // type members on an object. See NewTypeCompatMacros.emitTrait
-    Nil
   case Some((2, 11)) =>
     Seq("-Xlint")
   case _ =>
@@ -137,35 +126,9 @@ lazy val defaultScalacOptions = scalacOptions ++= Seq(
     Seq("-Xlint:-unused,_")
 })
 
-// Only include for 2.10; see https://github.com/milessabin/macro-compat/pull/85 for discussion
-lazy val macrocompatDependency = libraryDependencies ++= {
-  CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2, v)) if v < 11 =>
-      Seq(
-        "org.typelevel" %% "macro-compat" % "1.1.1"
-      )
-    case _ =>
-      Nil
-  }
-}
-
 lazy val defaultLibraryDependencies = libraryDependencies ++= Seq(
   scalaOrganization.value % "scala-reflect" % scalaVersion.value % Provided,
   scalaOrganization.value % "scala-compiler" % scalaVersion.value % Provided,
   "org.scalacheck" %%% "scalacheck" % "1.14.0" % Test,
   "org.scalatest" %%% "scalatest" % "3.0.8" % Test
 )
-
-def scalaPartV = Def.setting(CrossVersion.partialVersion(scalaVersion.value))
-
-lazy val crossVersionSharedSources: Seq[Setting[_]] =
-  Seq(Compile, Test).map { sc =>
-    (unmanagedSourceDirectories in sc) ++= {
-      (unmanagedSourceDirectories in sc).value.map { dir =>
-        scalaPartV.value match {
-          case Some((2, y)) if y == 10 => new File(dir.getPath + "_2.10")
-          case Some((2, y)) if y >= 11 => new File(dir.getPath + "_2.11+")
-        }
-      }
-    }
-  }
