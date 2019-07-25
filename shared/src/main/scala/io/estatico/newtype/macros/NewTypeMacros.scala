@@ -8,10 +8,6 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
 
   import c.universe._
 
-  def opsClsParent: Symbol = typeOf[AnyVal].typeSymbol
-
-  val emitTrait: Boolean = false
-
   def newtypeAnnotation(annottees: Tree*): Tree =
     runAnnotation(subtype = false, annottees)
 
@@ -129,46 +125,24 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
     // Note that we use an abstract type alias
     // `type Type <: Base with Tag` and not `type Type = ...` to prevent
     // scalac automatically expanding the type alias.
-    // Also, Scala 2.10 doesn't support objects having abstract type members, so we have to
-    // use some indirection by defining the abstract type in a trait then having
-    // the companion object extend the trait.
-    // See https://github.com/scala/bug/issues/10750
 
     val baseTypeDef = mkBaseTypeDef(clsDef, reprType, subtype)
     val typeTypeDef = mkTypeTypeDef(clsDef, tparamNames, subtype)
 
-    if (emitTrait) {
-      val newtypeObjParents = objParents :+ tq"$typesTraitName"
-      val newtypeObjDef = ModuleDef(
-        objMods, objName, Template(newtypeObjParents, objSelf, objDefs ++ companionExtraDefs)
-      )
+    val newtypeObjParents = objParents
+    val newtypeObjDef = ModuleDef(
+      objMods, objName, Template(newtypeObjParents, objSelf, objDefs ++ companionExtraDefs ++ Seq(
+        q"type Repr[..$tparams] = $reprType",
+        baseTypeDef,
+        q"trait Tag[..$tparams] extends _root_.scala.Any",
+        typeTypeDef
+      ))
+    )
 
-      q"""
-        type $typeName[..$tparams] = ${typeName.toTermName}.Type[..$tparamNames]
-        trait $typesTraitName {
-          type Repr[..$tparams] = $reprType
-          $baseTypeDef
-          trait Tag[..$tparams] extends _root_.scala.Any
-          $typeTypeDef
-        }
-        $newtypeObjDef
-      """
-    } else {
-      val newtypeObjParents = objParents
-      val newtypeObjDef = ModuleDef(
-        objMods, objName, Template(newtypeObjParents, objSelf, objDefs ++ companionExtraDefs ++ Seq(
-          q"type Repr[..$tparams] = $reprType",
-          baseTypeDef,
-          q"trait Tag[..$tparams] extends _root_.scala.Any",
-          typeTypeDef
-        ))
-      )
-
-      q"""
-        type $typeName[..$tparams] = $objName.Type[..$tparamNames]
-        $newtypeObjDef
-      """
-    }
+    q"""
+      type $typeName[..$tparams] = $objName.Type[..$tparamNames]
+      $newtypeObjDef
+    """
   }
 
   def maybeGenerateApplyMethod(
@@ -238,7 +212,7 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
     if (extensionMethods.isEmpty) {
       Nil
     } else {
-      val parent = if (optimizeOps) opsClsParent else typeOf[AnyRef].typeSymbol
+      val parent = if (optimizeOps) typeOf[AnyVal].typeSymbol else typeOf[AnyRef].typeSymbol
       // Note that we generate the implicit class for extension methods and the
       // implicit def to convert `this` used in the Ops to our newtype value.
       if (clsDef.tparams.isEmpty) {
