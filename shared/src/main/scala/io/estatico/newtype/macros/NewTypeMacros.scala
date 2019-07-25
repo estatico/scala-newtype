@@ -28,12 +28,6 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
     result
   }
 
-  // Support Flag values which are not available in Scala 2.10
-  implicit final class FlagSupportOps(val repr: Flag.type) {
-    def CASEACCESSOR = scala.reflect.internal.Flags.CASEACCESSOR.toLong.asInstanceOf[FlagSet]
-    def PARAMACCESSOR = scala.reflect.internal.Flags.PARAMACCESSOR.toLong.asInstanceOf[FlagSet]
-  }
-
   val CoercibleCls = typeOf[Coercible[Nothing, Nothing]].typeSymbol
   val CoercibleObj = CoercibleCls.companion
   val ClassTagCls = typeOf[ClassTag[Nothing]].typeSymbol
