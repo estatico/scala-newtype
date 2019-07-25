@@ -19,7 +19,7 @@ object Coercible {
   ): Coercible[M1[M2[A]], M1[M2[B]]] = Coercible.instance
 }
 
-final class CoercibleIdOps[A](val repr: A) extends AnyVal {
+final class CoercibleIdOps[A](private val repr: A) extends AnyVal {
   @inline def coerce[B](implicit ev: Coercible[A, B]): B = repr.asInstanceOf[B]
 }
 
