@@ -1,7 +1,6 @@
 package io.estatico.newtype.macros
 
 import io.estatico.newtype.Coercible
-import scala.reflect.ClassTag
 import scala.reflect.macros.blackbox
 
 //noinspection TypeAnnotation
@@ -39,8 +38,6 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
 
   val CoercibleCls = typeOf[Coercible[Nothing, Nothing]].typeSymbol
   val CoercibleObj = CoercibleCls.companion
-  val ClassTagCls = typeOf[ClassTag[Nothing]].typeSymbol
-  val ClassTagObj = ClassTagCls.companion
   val ObjectCls = typeOf[Object].typeSymbol
 
   // We need to know if the newtype is defined in an object so we can report
@@ -118,12 +115,18 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
     val reprType = valDef.tpt
     val typesTraitName = TypeName(s"${clsName.decodedName}__Types")
     val tparams = clsDef.tparams
+    val extra = generateExtra(
+      clsDef, modDef, valDef,
+      tparamsNoVar, tparamNames, tparamsWild,
+      subtype
+    )
     val companionExtraDefs =
       maybeGenerateApplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
       maybeGenerateUnapplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
       maybeGenerateOpsDef(clsDef, valDef, tparamsNoVar, tparamNames) :::
       generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) :::
-      generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild)
+      generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild) :::
+      extra
 
     // Note that we use an abstract type alias
     // `type Type <: Base with Tag` and not `type Type = ...` to prevent
@@ -298,24 +301,14 @@ private[macros] class NewTypeMacros(val c: blackbox.Context)
       q"@_root_.scala.inline implicit def unsafeWrap: $CoercibleCls[Repr, Type] = $CoercibleObj.instance",
       q"@_root_.scala.inline implicit def unsafeUnwrap: $CoercibleCls[Type, Repr] = $CoercibleObj.instance",
       q"@_root_.scala.inline implicit def unsafeWrapM[M[_]]: $CoercibleCls[M[Repr], M[Type]] = $CoercibleObj.instance",
-      q"@_root_.scala.inline implicit def unsafeUnwrapM[M[_]]: $CoercibleCls[M[Type], M[Repr]] = $CoercibleObj.instance",
-      // Avoid ClassCastException with Array types by prohibiting Array coercing.
-      q"@_root_.scala.inline implicit def cannotWrapArrayAmbiguous1:   $CoercibleCls[_root_.scala.Array[Repr], _root_.scala.Array[Type]] = $CoercibleObj.instance",
-      q"@_root_.scala.inline implicit def cannotWrapArrayAmbiguous2:   $CoercibleCls[_root_.scala.Array[Repr], _root_.scala.Array[Type]] = $CoercibleObj.instance",
-      q"@_root_.scala.inline implicit def cannotUnwrapArrayAmbiguous1: $CoercibleCls[_root_.scala.Array[Type], _root_.scala.Array[Repr]] = $CoercibleObj.instance",
-      q"@_root_.scala.inline implicit def cannotUnwrapArrayAmbiguous2: $CoercibleCls[_root_.scala.Array[Type], _root_.scala.Array[Repr]] = $CoercibleObj.instance"
+      q"@_root_.scala.inline implicit def unsafeUnwrapM[M[_]]: $CoercibleCls[M[Type], M[Repr]] = $CoercibleObj.instance"
     ) else List(
       q"@_root_.scala.inline implicit def unsafeWrap[..$tparamsNoVar]: $CoercibleCls[Repr[..$tparamNames], Type[..$tparamNames]] = $CoercibleObj.instance",
       q"@_root_.scala.inline implicit def unsafeUnwrap[..$tparamsNoVar]: $CoercibleCls[Type[..$tparamNames], Repr[..$tparamNames]] = $CoercibleObj.instance",
       q"@_root_.scala.inline implicit def unsafeWrapM[M[_], ..$tparamsNoVar]: $CoercibleCls[M[Repr[..$tparamNames]], M[Type[..$tparamNames]]] = $CoercibleObj.instance",
       q"@_root_.scala.inline implicit def unsafeUnwrapM[M[_], ..$tparamsNoVar]: $CoercibleCls[M[Type[..$tparamNames]], M[Repr[..$tparamNames]]] = $CoercibleObj.instance",
       q"@_root_.scala.inline implicit def unsafeWrapK[T[_[..$tparamsNoVar]]]: $CoercibleCls[T[Repr], T[Type]] = $CoercibleObj.instance",
-      q"@_root_.scala.inline implicit def unsafeUnwrapK[T[_[..$tparamsNoVar]]]: $CoercibleCls[T[Type], T[Repr]] = $CoercibleObj.instance",
-      // Avoid ClassCastException with Array types by prohibiting Array coercing.
-      q"@_root_.scala.inline implicit def cannotWrapArrayAmbiguous1[..$tparamsNoVar]:   $CoercibleCls[_root_.scala.Array[Repr[..$tparamNames]], _root_.scala.Array[Type[..$tparamNames]]] = $CoercibleObj.instance",
-      q"@_root_.scala.inline implicit def cannotWrapArrayAmbiguous2[..$tparamsNoVar]:   $CoercibleCls[_root_.scala.Array[Repr[..$tparamNames]], _root_.scala.Array[Type[..$tparamNames]]] = $CoercibleObj.instance",
-      q"@_root_.scala.inline implicit def cannotUnwrapArrayAmbiguous1[..$tparamsNoVar]: $CoercibleCls[_root_.scala.Array[Type[..$tparamNames]], _root_.scala.Array[Repr[..$tparamNames]]] = $CoercibleObj.instance",
-      q"@_root_.scala.inline implicit def cannotUnwrapArrayAmbiguous2[..$tparamsNoVar]: $CoercibleCls[_root_.scala.Array[Type[..$tparamNames]], _root_.scala.Array[Repr[..$tparamNames]]] = $CoercibleObj.instance"
+      q"@_root_.scala.inline implicit def unsafeUnwrapK[T[_[..$tparamsNoVar]]]: $CoercibleCls[T[Type], T[Repr]] = $CoercibleObj.instance"
     )
   }
 

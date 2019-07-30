@@ -3,6 +3,8 @@ package io.estatico.newtype.macros
 import org.scalatest.{FlatSpec, Matchers}
 import io.estatico.newtype.ops._
 import org.scalacheck.Arbitrary
+import org.scalatest.exceptions.TestFailedException
+import scala.reflect.runtime.universe.WeakTypeTag
 
 class NewTypeMacrosTest extends FlatSpec with Matchers {
 
@@ -35,13 +37,6 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
   it should "convert instance methods into extension methods" in {
     val res: Bar = Bar(2).twice
     res shouldBe 4
-  }
-
-  it should "work in arrays" in {
-    val foo = Foo(313)
-    // See https://github.com/estatico/scala-newtype/issues/25
-    // Array(foo).apply(0) shouldBe foo
-    Array[Int](313).asInstanceOf[Array[Foo]].apply(0) shouldBe foo
   }
 
   behavior of "@newtype class"
@@ -102,9 +97,7 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     import scala.collection.immutable.Set
     val repr = Set(Option("newtypes"))
     val ot = OptionT(repr)
-    // See https://github.com/estatico/scala-newtype/issues/25
-    // Array(ot).apply(0) shouldBe ot
-    Array(repr).asInstanceOf[Array[OptionT[Set, String]]].apply(0) shouldBe ot
+    Array(repr).coerce[Array[OptionT[Set, String]]].apply(0) shouldBe ot
   }
 
   behavior of "@newtype with type bounds"
