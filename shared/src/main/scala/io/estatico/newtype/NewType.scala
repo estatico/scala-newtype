@@ -7,6 +7,10 @@ trait NewType extends BaseNewType { self =>
 }
 
 object NewType {
+  class NewTypeUnapplyOps[A](val a: A) extends AnyVal {
+    def isEmpty: Boolean = false
+    def get: A = a
+  }
   trait Of[R] extends BaseNewType.Of[R] with NewType
   trait Default[R] extends Of[R] with NewTypeExtras
 }
