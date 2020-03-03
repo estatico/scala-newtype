@@ -133,6 +133,32 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     assertCompiles("y: String")
   }
 
+  it should "support deriving type class instances for simple newtypes using deriving in annotation" in {
+    @newtype(deriving = deriving[Arbitrary]) case class Text(private val s: String)
+    val x = scala.Predef.implicitly[Arbitrary[Text]].arbitrary.sample.get
+    assertCompiles("x: Text")
+    val y = x.coerce[String]
+    assertCompiles("y: String")
+  }
+
+  it should "support deriving several type class instances for simple newtypes via deriving" in {
+    trait OtherTC[X] {
+      def make: X
+    }
+    implicit val stringOtherTC: OtherTC[String] = new OtherTC[String] { def make: String = "ABC" }
+    @newtype(deriving = deriving[Arbitrary, OtherTC]) case class Text(private val s: String)
+
+    val x = scala.Predef.implicitly[Arbitrary[Text]].arbitrary.sample.get
+    assertCompiles("x: Text")
+    val y = x.coerce[String]
+    assertCompiles("y: String")
+
+    val x2 = scala.Predef.implicitly[OtherTC[Text]].make
+    assertCompiles("x2: Text")
+    val y2 = x2.coerce[String]
+    assertCompiles("y2: String")
+  }
+
   it should "support deriving type class instances for simple newtypes via coerce" in {
     @newtype case class Text(private val s: String)
     object Text {
@@ -161,6 +187,17 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
     object Nel {
       def apply[A](head: A, tail: List[A]): Nel[A] = (head +: tail).coerce[Nel[A]]
       implicit val functor: Functor[Nel] = scala.Predef.implicitly[Functor[List]].coerce
+    }
+
+    val x = scala.Predef.implicitly[Functor[Nel]].map(Nel(1, List(2, 3)))(_ * 2)
+    assertCompiles("x: Nel[Int]")
+    x shouldBe List(2, 4, 6)
+  }
+
+  it should "support deriving type class instances for higher-kinded newtypes via derivingK" in {
+    @newtype(derivingK = derivingK[Functor]) class Nel[A](private val list: List[A])
+    object Nel {
+      def apply[A](head: A, tail: List[A]): Nel[A] = (head +: tail).coerce[Nel[A]]
     }
 
     val x = scala.Predef.implicitly[Functor[Nel]].map(Nel(1, List(2, 3)))(_ * 2)
@@ -215,6 +252,17 @@ class NewTypeMacrosTest extends FlatSpec with Matchers {
         implicit a: Arbitrary[F[Either[L, R]]]
       ): Arbitrary[EitherT[F, L, R]] = a.coerce
     }
+    val x = {
+      import scala.Predef._
+      scala.Predef.implicitly[Arbitrary[EitherT[List, String, Int]]].arbitrary.sample.get
+    }
+    assertCompiles("x: EitherT[List, String, Int]")
+    val y = x.coerce[List[Either[String, Int]]]
+    assertCompiles("y: List[Either[String, Int]]")
+  }
+
+  it should "support deriving type class instances for newtypes with type params via deriving" in {
+    @newtype(deriving = deriving[Arbitrary]) case class EitherT[F[_], L, R](private val x: F[Either[L, R]])
     val x = {
       import scala.Predef._
       scala.Predef.implicitly[Arbitrary[EitherT[List, String, Int]]].arbitrary.sample.get

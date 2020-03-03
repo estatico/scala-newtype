@@ -47,15 +47,17 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
     }
   }
 
-  val (optimizeOps, unapply, debug, debugRaw) = c.prefix.tree match {
+  val (deriveTypes, deriveHKTypes, optimizeOps, unapply, debug, debugRaw) = c.prefix.tree match {
     case q"new ${`macroName`}(..$args)" =>
       (
+        args.collectFirst { case q"deriving = deriving[..$tcs]" => tcs.collect { case Ident(name) => name }.toList }.getOrElse(Nil),
+        args.collectFirst { case q"derivingK = derivingK[..$tcs]" => tcs.collect { case Ident(name) => name }.toList }.getOrElse(Nil),
         args.collectFirst { case q"optimizeOps = false" => }.isEmpty,
         args.collectFirst { case q"unapply = true" => }.isDefined,
         args.collectFirst { case q"debug = true" => }.isDefined,
         args.collectFirst { case q"debugRaw = true" => }.isDefined
       )
-    case _ => (true, false, false, false)
+    case _ => (Nil, Nil, true, false, false, false)
   }
 
   def fail(msg: String) = c.abort(c.enclosingPosition, msg)
@@ -105,16 +107,15 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
   ): Tree = {
     val ModuleDef(objMods, objName, Template(objParents, objSelf, objDefs)) = modDef
     val typeName = clsDef.name
-    val clsName = clsDef.name.decodedName
     val reprType = valDef.tpt
-    val typesTraitName = TypeName(s"${clsName.decodedName}__Types")
     val tparams = clsDef.tparams
     val companionExtraDefs =
       maybeGenerateApplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
       maybeGenerateUnapplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
       maybeGenerateOpsDef(clsDef, valDef, tparamsNoVar, tparamNames) :::
       generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) :::
-      generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild)
+      generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild) :::
+      generateDerivedTypeClassInstances(tparamsNoVar, tparamNames, reprType)
 
     // Note that we use an abstract type alias
     // `type Type <: Base with Tag` and not `type Type = ...` to prevent
@@ -257,6 +258,22 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
         """
       )
 
+    }
+  }
+
+  // generate implicit val/def in companion for all types specified in deriving/derivingK argument of @newtype
+  def generateDerivedTypeClassInstances(tparamsNoVar: List[TypeDef], tparamNames: List[TypeName], reprType: Tree): List[Tree] = {
+    def makeName(name: c.universe.TypeName) = TermName(c.freshName(s"_newTypeDerived$$${name.toString}"))
+
+    val derivedTypes = deriveTypes.map(_.toTypeName).map { name =>
+      if (tparamsNoVar.isEmpty)
+        q"implicit val ${makeName(name)}: $name[Type] = scala.Predef.implicitly[$name[Repr]].asInstanceOf[$name[Type]]"
+      else
+        q"implicit def ${makeName(name)}[..$tparamsNoVar](implicit ev: $name[$reprType]): $name[Type[..$tparamNames]] = ev.asInstanceOf[$name[Type[..$tparamNames]]]"
+    }
+
+    derivedTypes ::: deriveHKTypes.map(_.toTypeName).map { name =>
+      q"implicit def ${makeName(name)}(implicit ev: $name[Repr]): $name[Type] = ev.asInstanceOf[$name[Type]]"
     }
   }
 

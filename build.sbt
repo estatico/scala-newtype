@@ -22,7 +22,7 @@ lazy val catsTests = crossProject(JSPlatform, JVMPlatform).in(file("cats-tests")
   .settings(
     name := "newtype-cats-tests",
     description := "Test suite for newtype + cats interop",
-    libraryDependencies += "org.typelevel" %%% "cats-core" % "2.0.0-M4"
+    libraryDependencies += "org.typelevel" %%% "cats-core" % "2.0.0"
   )
 
 lazy val catsTestsJVM = catsTests.jvm
