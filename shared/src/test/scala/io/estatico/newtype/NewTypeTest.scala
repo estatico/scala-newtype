@@ -2,9 +2,10 @@ package io.estatico.newtype
 
 import org.scalacheck.Arbitrary
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class NewTypeTest extends FlatSpec with ScalaCheckPropertyChecks with Matchers {
+class NewTypeTest extends AnyFlatSpec with ScalaCheckPropertyChecks with Matchers {
 
   import NewTypeTest._
 

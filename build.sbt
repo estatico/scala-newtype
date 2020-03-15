@@ -4,7 +4,7 @@ import sbtcrossproject.CrossPlugin.autoImport.crossProject
 organization in ThisBuild := "io.estatico"
 
 lazy val root = project.in(file("."))
-  .aggregate(newtypeJS, newtypeJVM, catsTestsJVM, catsTestsJS)
+  .aggregate(newtypeJS, newtypeJVM, catsTestsJVM)
   .settings(noPublishSettings)
 
 lazy val newtype = crossProject(JSPlatform, JVMPlatform).in(file("."))
@@ -15,18 +15,23 @@ lazy val newtype = crossProject(JSPlatform, JVMPlatform).in(file("."))
 lazy val newtypeJVM = newtype.jvm
 lazy val newtypeJS = newtype.js
 
-lazy val catsTests = crossProject(JSPlatform, JVMPlatform).in(file("cats-tests"))
+lazy val catsTests = crossProject(JVMPlatform).in(file("cats-tests"))
   .dependsOn(newtype)
   .settings(defaultSettings)
   .settings(noPublishSettings)
   .settings(
     name := "newtype-cats-tests",
     description := "Test suite for newtype + cats interop",
-    libraryDependencies += "org.typelevel" %%% "cats-core" % "2.0.0-M4"
+    libraryDependencies +=
+      (CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, v)) if v >= 12 =>
+          "org.typelevel" %%% "cats-core" % "2.1.1"
+        case _ =>
+          "org.typelevel" %%% "cats-core" % "2.0.0"
+      })
   )
 
 lazy val catsTestsJVM = catsTests.jvm
-lazy val catsTestsJS = catsTests.js
 
 lazy val noPublishSettings = Seq(
   publish := {},
@@ -129,6 +134,7 @@ lazy val defaultScalacOptions = scalacOptions ++= Seq(
 lazy val defaultLibraryDependencies = libraryDependencies ++= Seq(
   scalaOrganization.value % "scala-reflect" % scalaVersion.value % Provided,
   scalaOrganization.value % "scala-compiler" % scalaVersion.value % Provided,
-  "org.scalacheck" %%% "scalacheck" % "1.14.0" % Test,
-  "org.scalatest" %%% "scalatest" % "3.0.8" % Test
+  "org.scalacheck" %%% "scalacheck" % "1.14.3" % Test,
+  "org.scalatest" %%% "scalatest" % "3.1.1" % Test,
+  "org.scalatestplus" %%% "scalacheck-1-14" % "3.1.1.0" % Test,
 )
