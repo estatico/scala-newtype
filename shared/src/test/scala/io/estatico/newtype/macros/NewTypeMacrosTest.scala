@@ -112,12 +112,9 @@ class NewTypeMacrosTest extends AnyFlatSpec with Matchers {
 
   it should "enforce type bounds" in {
     val x = Sub(new java.util.HashMap[String, Int]): Sub[java.util.HashMap[String, Int]]
-    val y = Sub(new java.util.concurrent.ConcurrentHashMap[String, Int])
 
     assertCompiles("x: Sub[java.util.HashMap[String, Int]]")
-    assertCompiles("y: Sub[java.util.concurrent.ConcurrentHashMap[String, Int]]")
 
-    assertDoesNotCompile("x: Sub[java.util.concurrent.ConcurrentHashMap[String, Int]]")
     assertDoesNotCompile("y: Sub[java.util.HashMap[String, Int]]")
   }
 
