@@ -1,10 +1,11 @@
 package io.estatico.newtype.macros
 
-import org.scalatest.{FlatSpec, Matchers}
 import io.estatico.newtype.ops._
 import org.scalacheck.Arbitrary
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class NewTypeMacrosTest extends FlatSpec with Matchers {
+class NewTypeMacrosTest extends AnyFlatSpec with Matchers {
 
   import NewTypeMacrosTest._
 

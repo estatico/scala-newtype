@@ -4,10 +4,11 @@ import cats._
 import cats.implicits._
 import io.estatico.newtype.ops._
 import io.estatico.newtype.macros.{newsubtype, newtype}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
-class NewTypeCatsTest extends FlatSpec with Matchers with ScalaCheckPropertyChecks {
+class NewTypeCatsTest extends AnyFlatSpec with Matchers with ScalaCheckPropertyChecks {
 
   import NewTypeCatsTest._
 
