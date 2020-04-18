@@ -4,7 +4,7 @@ import io.estatico.newtype.Coercible
 import scala.reflect.ClassTag
 import scala.reflect.macros.blackbox
 
-private[macros] class NewTypeMacros(val c: blackbox.Context) {
+private[macros] class NewTypeMacros(val c: blackbox.Context) extends ExtraDefs {
 
   import c.universe._
 
@@ -109,10 +109,11 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
     val reprType = valDef.tpt
     val typesTraitName = TypeName(s"${clsName.decodedName}__Types")
     val tparams = clsDef.tparams
+    val maybeOps = maybeGenerateOpsDef(clsDef, valDef, tparamsNoVar, tparamNames)
     val companionExtraDefs =
       maybeGenerateApplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
       maybeGenerateUnapplyMethod(clsDef, valDef, tparamsNoVar, tparamNames) :::
-      maybeGenerateOpsDef(clsDef, valDef, tparamsNoVar, tparamNames) :::
+      maybeOps :::
       generateCoercibleInstances(tparamsNoVar, tparamNames, tparamsWild) :::
       generateDerivingMethods(tparamsNoVar, tparamNames, tparamsWild)
 
@@ -122,12 +123,15 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
 
     val baseTypeDef = mkBaseTypeDef(clsDef, reprType, subtype)
     val typeTypeDef = mkTypeTypeDef(clsDef, tparamNames, subtype)
-    val enableImplicits = List( q"import _root_.scala.language.implicitConversions" )
-    val enableHKTs = List( q"import _root_.scala.language.higherKinds" )
+
+    val enableImplicits: List[Tree] = List( q"import _root_.scala.language.implicitConversions" )
+
+    val imports: List[Tree] =
+      (if (maybeOps.isEmpty) Nil else enableImplicits) ++ enableHKTs
 
     val newtypeObjParents = objParents
     val newtypeObjDef = ModuleDef(
-      objMods, objName, Template(newtypeObjParents, objSelf, objDefs ++ enableImplicits ++ enableHKTs ++ companionExtraDefs ++ Seq(
+      objMods, objName, Template(newtypeObjParents, objSelf, objDefs ++ imports ++ companionExtraDefs ++ Seq(
         q"type Repr[..$tparams] = $reprType",
         baseTypeDef,
         q"trait Tag[..$tparams] extends _root_.scala.Any",
