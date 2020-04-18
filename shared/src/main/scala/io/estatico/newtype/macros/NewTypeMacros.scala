@@ -123,10 +123,11 @@ private[macros] class NewTypeMacros(val c: blackbox.Context) {
     val baseTypeDef = mkBaseTypeDef(clsDef, reprType, subtype)
     val typeTypeDef = mkTypeTypeDef(clsDef, tparamNames, subtype)
     val enableImplicits = List( q"import _root_.scala.language.implicitConversions" )
+    val enableHKTs = List( q"import _root_.scala.language.higherKinds" )
 
     val newtypeObjParents = objParents
     val newtypeObjDef = ModuleDef(
-      objMods, objName, Template(newtypeObjParents, objSelf, objDefs ++ enableImplicits ++ companionExtraDefs ++ Seq(
+      objMods, objName, Template(newtypeObjParents, objSelf, objDefs ++ enableImplicits ++ enableHKTs ++ companionExtraDefs ++ Seq(
         q"type Repr[..$tparams] = $reprType",
         baseTypeDef,
         q"trait Tag[..$tparams] extends _root_.scala.Any",
