@@ -252,20 +252,30 @@ object Nel {
 }
 ```
 
-### Automatically Deriving Instances
+### Coercible Instance Trick
 
-In some cases, you may want to automatically derive type class instances
-for all newtypes. You can take advantage of the `Coercible`
-type class to achieve that.
+**Note that this is NOT recommended!**
 
-Here is an example of automatically deriving `Eq` instances for all newtypes.
+In some cases, you may want to automatically derive a type class instance
+for all newtypes by leveraging `Coercible`. While seemingly convenient, this is
+**NOT** recommended as it in some ways goes against the spirit of using
+a newtype in the first place. Specializing a specific instance for a
+newtype will be tricky and will require clever implicit scoping. Also,
+it can [greatly increase your compile times](https://github.com/estatico/scala-newtype/issues/64).
+Instead, it's generally better to explicitly define instances for your
+newtypes.
+
+**You have been warned!**
+
+The following example generates an `Eq` instance for all newtypes in which
+their underlying `Repr` type has an `Eq` instance.
 
 ```scala
 scala> :paste
 
 import cats._, cats.implicits._
 
-/** If we have an Eq instance for Repr type R, derive an Eq instance for  NewType N. */
+/** If we have an Eq instance for Repr type R, derive an Eq instance for newtype N. */
 implicit def coercibleEq[R, N](implicit ev: Coercible[Eq[R], Eq[N]], R: Eq[R]): Eq[N] =
   ev(R)
 
@@ -275,6 +285,26 @@ implicit def coercibleEq[R, N](implicit ev: Coercible[Eq[R], Eq[N]], R: Eq[R]): 
 
 scala> Foo(1) === Foo(2)
 res0: Boolean = false
+```
+
+However, as mentioned, it's generally better to explicitly define your
+instances.
+
+```scala
+@newtype case class Foo(x: Int)
+object Foo {
+  implicit val eq: Eq[Foo] = deriving
+}
+```
+
+You may not always be able to put your instance in the companion object, likely
+because the type class is not available where you are defining your newtype.
+In this case, simply define an orphan instance and import it where you need.
+
+```scala
+object EqOrphans {
+  implicit val eqFoo: Eq[Foo] = implicitly[Eq[Int]].coerce
+}
 ```
 
 ### Legacy encoding
