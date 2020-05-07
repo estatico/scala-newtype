@@ -11,7 +11,7 @@ NewTypes for Scala with no runtime overhead.
 If you are using SBT, add the following line to your build file -
 
 ```scala
-libraryDependencies += "io.estatico" %% "newtype" % "0.4.3"
+libraryDependencies += "io.estatico" %% "newtype" % "0.4.4"
 ```
 
 Make sure you have [macro-paradise](https://docs.scala-lang.org/overviews/macros/paradise.html) enabled
