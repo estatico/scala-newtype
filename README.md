@@ -23,6 +23,17 @@ addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.fu
 
 For Maven or other build tools, see the Maven Central badge at the top of this README.
 
+## Motivation
+
+This is an alternative to scala's native value classes. 
+
+Why this is better than simply `case class Thing(value: String) extends AnyVal`? 
+
+That is because value classes [will sometime allocate](https://docs.scala-lang.org/overviews/core/value-classes.html#allocation-summary).
+In contratry `@newtype` is allocation free.
+
+For more detailed comparison see https://failex.blogspot.com/2017/04/the-high-cost-of-anyval-subclasses.html
+
 ## Usage
 
 For generating newtypes via the `@newtype` macro, see [@newtype macro](#newtype-macro)
